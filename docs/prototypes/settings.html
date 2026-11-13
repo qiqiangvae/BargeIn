@@ -1,0 +1,1047 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Barge In · 设置（原型）</title>
+<style>
+  :root{
+    --window:#ececec;
+    --card:rgba(255,255,255,.78);
+    --stroke:rgba(0,0,0,.08);
+    --ink:#1d1d1f;
+    --ink2:rgba(0,0,0,.55);
+    --ink3:rgba(0,0,0,.42);
+    --accent:#0284c7;
+    --accent-text:#0369a1;
+    --warn:#b45309;
+    --danger:#b3261e;
+    --fill:rgba(0,0,0,.06);
+    --fill-weak:rgba(0,0,0,.03);
+    --segment:#fff;
+    --stage:#d9d9de;
+    --windshadow:0 24px 60px rgba(0,0,0,.22), 0 2px 6px rgba(0,0,0,.10);
+  }
+  html[data-theme="dark"]{
+    --window:#1e1e1e;
+    --card:rgba(255,255,255,.05);
+    --stroke:rgba(255,255,255,.10);
+    --ink:#f5f5f7;
+    --ink2:rgba(255,255,255,.66);
+    --ink3:rgba(255,255,255,.42);
+    --accent:#38bdf8;
+    --accent-text:#7dd3fc;
+    --warn:#fbbf24;
+    --danger:#f87171;
+    --fill:rgba(255,255,255,.08);
+    --fill-weak:rgba(255,255,255,.04);
+    --segment:rgba(255,255,255,.16);
+    --stage:#131315;
+    --windshadow:0 24px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06);
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{
+    margin:0;background:var(--stage);color:var(--ink);
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+    padding:28px 20px 44px;
+  }
+  .num{font-family:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif;font-variant-numeric:tabular-nums}
+
+  /* 原型工具条 */
+  .demo-bar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;width:640px;max-width:100%}
+  .demo-bar .label{font-size:11px;color:var(--ink2);margin-right:2px}
+  .demo-bar .spacer{flex:1}
+  .chip{appearance:none;border:1px solid var(--stroke);background:var(--card);color:var(--ink2);
+    font:inherit;font-size:11.5px;padding:4px 10px;border-radius:999px;cursor:pointer}
+  .chip:hover{color:var(--ink)}
+  .chip[aria-pressed="true"]{color:var(--accent-text);border-color:color-mix(in srgb, var(--accent) 55%, transparent);
+    background:color-mix(in srgb, var(--accent) 10%, transparent)}
+  .chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* 窗口：宽度固定，高度跟着页面内容走 */
+  .window{width:640px;max-width:100%;border-radius:10px;overflow:hidden;background:var(--window);
+    box-shadow:var(--windshadow);display:flex;flex-direction:column}
+  .titlebar{height:28px;flex:0 0 28px;display:flex;align-items:center;padding:0 12px;position:relative;
+    background:var(--window);border-bottom:1px solid var(--stroke)}
+  .lights{display:flex;gap:8px}
+  .lights i{width:12px;height:12px;border-radius:50%;display:block}
+  .lights i:nth-child(1){background:#ff5f57}
+  .lights i:nth-child(2){background:#febc2e}
+  .lights i:nth-child(3){background:#28c840}
+  .titlebar .title{position:absolute;left:0;right:0;text-align:center;font-size:13px;font-weight:600;color:var(--ink2);pointer-events:none}
+
+  /* 顶部：tab + 场景开关 */
+  .tabbar{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:14px 20px 8px}
+  .tabs{width:320px;height:32px}
+  .tabs button{font-size:12.5px}
+  .tabs button[aria-selected="true"]{background:var(--segment);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.10)}
+  .scene-switch{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .scene-switch .label{font-size:11px;color:var(--ink2)}
+
+  /* 页面 */
+  .pages{display:flex;flex-direction:column;min-height:0}
+  .page{display:none;flex-direction:column;min-height:0}
+  .page.is-active{display:flex}
+  .scroll{padding:12px 20px 20px;display:flex;flex-direction:column;gap:14px;max-height:596px;overflow-y:auto;
+    -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 14px),transparent);
+    mask-image:linear-gradient(to bottom,#000 calc(100% - 14px),transparent)}
+  .scroll::-webkit-scrollbar{width:8px}
+  .scroll::-webkit-scrollbar-thumb{background:var(--fill);border-radius:4px;border:2px solid transparent;background-clip:content-box}
+
+  /* 场景条：一句话说明 + 开关。标题只在 tab 上出现一次 */
+  .scene-bar{display:flex;align-items:center;gap:12px;padding:0 2px}
+  .scene-bar .summary{font-size:11px;color:var(--ink2)}
+  .scene-bar .sp{flex:1}
+
+  /* 卡片 */
+  .card{background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:16px;
+    display:flex;flex-direction:column;gap:12px}
+  .card-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-height:16px}
+  .card-head h2{margin:0;font-size:12.5px;font-weight:600}
+  .foot{font-size:11px;color:var(--ink2)}
+  .head-right{display:flex;align-items:center;gap:10px}
+
+  /* ── 预设卡：微缩的呈现，不是图标 + 一句话 ── */
+  .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .preset{display:flex;flex-direction:column;gap:7px;padding:8px;border-radius:11px;cursor:pointer;
+    background:var(--fill-weak);border:1px solid var(--stroke);position:relative;
+    transition:background .15s ease,border-color .15s ease}
+  .preset:hover{background:var(--fill)}
+  .preset.is-selected{background:color-mix(in srgb, var(--accent) 9%, transparent);
+    border-color:color-mix(in srgb, var(--accent) 55%, transparent)}
+  .preset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .mock{position:relative;height:66px;border-radius:7px;overflow:hidden;border:1px solid rgba(0,0,0,.10);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+  html[data-theme="dark"] .mock{border-color:rgba(255,255,255,.10)}
+  /* 大字墙：满屏重复大字，错峰淡出 */
+  .mock[data-kind="wall"]{background:#0b0d10}
+  .mock[data-kind="wall"] .big{font-size:15px;font-weight:800;color:#fff;letter-spacing:.04em;line-height:1.1}
+  .mock[data-kind="wall"] .dim{opacity:.42}
+  .mock[data-kind="wall"] .dimmer{opacity:.22}
+  /* 温柔：浅色屏幕右上角一张小卡片 */
+  .mock[data-kind="gentle"]{background:#e3e7ec}
+  .mock[data-kind="gentle"]::before{content:"";position:absolute;left:0;right:0;top:0;height:9px;
+    background:rgba(0,0,0,.05);border-bottom:1px solid rgba(0,0,0,.05)}
+  .mock[data-kind="gentle"] .mini-card{position:absolute;top:8px;right:8px;width:62px;height:28px;border-radius:5px;
+    background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.14);padding:5px 6px;display:flex;flex-direction:column;gap:3px}
+  .mock[data-kind="gentle"] .mini-card i{display:block;height:3px;border-radius:2px;background:rgba(0,0,0,.16)}
+  .mock[data-kind="gentle"] .mini-card i:first-child{width:68%;height:3px;background:rgba(0,0,0,.52)}
+  .mock[data-kind="gentle"] .mini-card i.short{width:42%}
+  /* 碎裂：暗屏 + 从中心裂开 */
+  .mock[data-kind="shatter"]{background:#0b0d10}
+  .mock[data-kind="shatter"] .cracks{position:absolute;inset:0;width:100%;height:100%}
+  .mock[data-kind="shatter"] .cracks path{fill:none;stroke:rgba(255,255,255,.62);stroke-width:.9;vector-effect:non-scaling-stroke}
+  .mock[data-kind="shatter"] .glow{position:absolute;width:52px;height:52px;left:50%;top:44%;transform:translate(-50%,-50%);
+    background:radial-gradient(circle,rgba(255,255,255,.26),transparent 68%)}
+  .mock[data-kind="shatter"] .mock-title{position:relative;font-size:10.5px;font-weight:700;color:#fff;letter-spacing:.02em}
+  /* 深色下温柔也是深色屏幕：微缩图要跟着外观走，不能摆一块白板 */
+  html[data-theme="dark"] .mock[data-kind="gentle"]{background:#24272b}
+  html[data-theme="dark"] .mock[data-kind="gentle"]::before{background:rgba(255,255,255,.05);border-bottom-color:rgba(255,255,255,.05)}
+  html[data-theme="dark"] .mock[data-kind="gentle"] .mini-card{background:#3b3f45;box-shadow:0 2px 10px rgba(0,0,0,.45)}
+  html[data-theme="dark"] .mock[data-kind="gentle"] .mini-card i{background:rgba(255,255,255,.22)}
+  html[data-theme="dark"] .mock[data-kind="gentle"] .mini-card i:first-child{background:rgba(255,255,255,.58)}
+
+  .picked{flex:0 0 auto;margin-left:auto;width:15px;height:15px;border-radius:50%;background:var(--accent);
+    color:#fff;display:grid;place-items:center}
+  .picked svg{width:8px;height:8px}
+  .preset-name{font-size:12.5px;font-weight:600;line-height:1.25;display:flex;align-items:center;gap:5px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .preset-desc{font-size:11px;line-height:1.35;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* 选中卡的动作只出现一处，不再每张卡挂三个图标按钮 */
+  .preset-actions{display:flex;align-items:center;gap:6px;padding-top:2px}
+  .preset-actions .sp{flex:1}
+  .act{appearance:none;font:inherit;font-size:11.5px;color:var(--ink);cursor:pointer;height:28px;padding:0 10px;
+    border-radius:8px;border:1px solid var(--stroke);background:var(--fill-weak);
+    display:inline-flex;align-items:center;gap:5px}
+  .act:hover{background:var(--fill)}
+  .act svg{width:12px;height:12px;color:var(--ink2)}
+  .act:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .act.danger{color:var(--ink2)}
+  .act.danger:hover{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent)}
+  .act.danger svg{color:currentColor}
+  .act.is-confirming{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 55%,transparent);
+    background:color-mix(in srgb,var(--danger) 10%,transparent)}
+  .act.is-confirming svg{display:none}
+
+  /* 内联编辑器 */
+  .editor{display:none;flex-direction:column;gap:10px;padding:12px;border-radius:11px;
+    background:var(--fill-weak);border:1px solid var(--stroke)}
+  .editor.is-open{display:flex}
+  .editor-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .editor-head .t{font-size:11.5px;font-weight:600;color:var(--ink2)}
+  .link{appearance:none;border:0;background:none;font:inherit;font-size:11px;color:var(--accent-text);
+    cursor:pointer;padding:2px 0;border-radius:4px}
+  .link:hover{text-decoration:underline}
+  .link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field-row{display:flex;align-items:center;gap:12px}
+  .field-row .seg{width:180px;flex:0 0 180px}
+  .field-label{font-size:11px;color:var(--ink2);display:flex;align-items:center;gap:6px}
+  .tag{font-style:normal;font-size:9.5px;font-weight:600;padding:1px 5px;border-radius:4px;
+    color:var(--accent-text);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+  input[type="text"],input[type="password"]{appearance:none;width:100%;height:28px;border-radius:8px;padding:0 9px;font:inherit;
+    font-size:12px;color:var(--ink);background:var(--fill-weak);border:1px solid var(--stroke)}
+  input::placeholder{color:var(--ink3)}
+  input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+  .vars{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+  .vars .k{font-size:10.5px;color:var(--ink3)}
+  .vars code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:var(--ink2);
+    background:var(--fill);padding:1.5px 5px;border-radius:4px}
+
+  /* 提示 */
+  .notice{display:flex;align-items:flex-start;gap:6px;margin:0;font-size:11px;line-height:1.4;color:var(--warn)}
+  .notice svg{width:11px;height:11px;flex:0 0 11px;margin-top:2px}
+
+  /* 通用行 */
+  .row{display:flex;align-items:center;gap:12px;min-height:28px}
+  .row .txt{display:flex;flex-direction:column;gap:2px}
+  .row .t{font-size:13px}
+  .row .h{font-size:11px;color:var(--ink2)}
+  .row .sp{flex:1}
+  .sp{flex:1}
+  .note{font-size:11px;line-height:1.5;color:var(--ink2);margin:0}
+  hr.sep{border:0;border-top:1px solid var(--stroke);margin:0;opacity:.8}
+
+  .stepper{display:flex;align-items:center;gap:10px}
+  .stepper .val{display:flex;align-items:baseline;gap:3px;min-width:62px;justify-content:flex-end}
+  .stepper .val b{font-size:13px;font-weight:600}
+  .stepper .val span{font-size:11px;color:var(--ink2)}
+  .stepper .btns{display:flex;gap:4px}
+  .circ{appearance:none;width:24px;height:24px;border-radius:50%;border:0;cursor:pointer;
+    background:var(--fill);color:var(--ink);display:grid;place-items:center;font:inherit;padding:0}
+  .circ:hover{background:var(--fill)}
+  .circ svg{width:9px;height:9px}
+  .circ:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .ghost{appearance:none;font:inherit;font-size:12px;font-weight:500;color:var(--ink);cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:8px;
+    border:1px solid var(--stroke);background:var(--fill-weak)}
+  .ghost:hover{background:var(--fill)}
+  .ghost:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .ghost svg{width:12px;height:12px;color:var(--ink2)}
+  .ghost.num{font-family:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif;font-variant-numeric:tabular-nums;
+    font-size:13px;font-weight:600;padding:0 10px;min-width:64px;justify-content:center}
+
+  .pills{display:flex;gap:5px}
+  .day{appearance:none;width:30px;height:28px;border-radius:8px;cursor:pointer;font:inherit;font-size:12px;
+    color:var(--ink2);background:var(--fill-weak);border:1px solid var(--stroke)}
+  .day[aria-pressed="true"]{color:var(--accent-text);font-weight:600;
+    background:color-mix(in srgb,var(--accent) 14%,transparent);
+    border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+  .day:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .switch{width:36px;height:20px;border-radius:999px;background:var(--accent);position:relative;border:0;cursor:pointer;padding:0;appearance:none;flex:0 0 36px}
+  .switch::after{content:"";position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+  .switch[aria-checked="false"]{background:var(--fill)}
+  .switch[aria-checked="false"]::after{right:auto;left:2px;background:var(--ink2)}
+  .switch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* 分段 */
+  .seg{display:flex;gap:2px;padding:2px;border-radius:9px;background:var(--fill);height:28px}
+  .seg button{flex:1;appearance:none;border:0;background:transparent;border-radius:7px;cursor:pointer;
+    font:inherit;font-size:11.5px;color:var(--ink2);padding:0}
+  .seg button[aria-checked="true"]{background:var(--segment);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.10)}
+  .seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  /* 指定时刻 */
+  .times{display:flex;flex-direction:column;border:1px solid var(--stroke);border-radius:10px;
+    background:var(--fill-weak);overflow:hidden}
+  .time-row{display:flex;align-items:center;gap:10px;padding:7px 8px 7px 10px}
+  .time-row + .time-row{border-top:1px solid var(--stroke)}
+  .time-row .ghost{background:none;border-color:transparent;height:26px;padding:0 6px;min-width:0;justify-content:flex-start}
+  .time-row .ghost{display:inline-flex;align-items:center;gap:5px}
+  .time-row .ghost:hover{background:var(--fill)}
+  .time-row .chev{width:8px;height:8px;color:var(--ink3);flex:0 0 auto}
+  .time-row .del{margin-left:auto}
+  .del{appearance:none;border:0;background:none;color:var(--ink3);cursor:pointer;width:24px;height:24px;
+    border-radius:6px;display:grid;place-items:center;padding:0;font:inherit;font-size:11px;font-weight:600}
+  .del svg{width:12px;height:12px}
+  .del:hover{background:var(--fill);color:var(--danger)}
+  .del:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .del.is-confirming{width:auto;padding:0 7px;color:var(--danger);
+    background:color-mix(in srgb,var(--danger) 10%,transparent);
+    border:1px solid color-mix(in srgb,var(--danger) 45%,transparent)}
+  .del.is-confirming svg{display:none}
+  .add-time{appearance:none;font:inherit;font-size:12px;font-weight:500;color:var(--ink2);cursor:pointer;
+    height:30px;border-radius:8px;background:none;display:flex;align-items:center;justify-content:center;gap:5px;
+    border:1px dashed var(--stroke)}
+  .add-time:hover{background:var(--fill-weak)}
+  .add-time svg{width:11px;height:11px}
+  .add-time:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* 订阅 */
+  .subs{display:flex;flex-direction:column;gap:8px}
+  .sub{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;
+    background:var(--fill-weak);border:1px solid var(--stroke)}
+  .sub .state{width:7px;height:7px;border-radius:50%;flex:0 0 7px;background:var(--accent)}
+  .sub.is-stale .state{background:var(--warn)}
+  .sub .body{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+  .sub .name{font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sub .meta{font-size:11px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sub.is-stale .meta{color:var(--warn)}
+  .sub .peek{appearance:none;border:0;background:none;font:inherit;font-size:11px;color:var(--accent-text);
+    cursor:pointer;padding:2px 5px;border-radius:5px;white-space:nowrap;flex:0 0 auto;display:inline-flex;align-items:center;gap:3px}
+  .sub .peek svg{width:9px;height:9px;transition:transform .15s ease}
+  .sub .peek[aria-expanded="true"] svg{transform:rotate(90deg)}
+  .sub .peek:hover{background:var(--fill)}
+  .sub .peek:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .sub-events{display:none;flex-direction:column;gap:1px;margin:-4px 0 4px;
+    padding:4px 6px 6px 26px;border-left:1px solid var(--stroke)}
+  .sub-events.is-open{display:flex}
+  .sub-ev{display:flex;align-items:baseline;gap:9px;font-size:11.5px;padding:3px 0}
+  .sub-ev .t{font-family:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif;font-variant-numeric:tabular-nums;
+    color:var(--ink2);flex:0 0 36px}
+  .sub-ev .n{color:var(--ink);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sub-ev .loc{font-size:11px;color:var(--ink3);flex:0 0 auto}
+  .sub-ev.is-past .t{color:var(--ink3)}
+  .sub-ev.is-past .n{color:var(--ink2)}
+  .sub-ev.is-past .loc{color:var(--ink3);opacity:.7}
+  .sub-empty{font-size:11px;color:var(--ink3);padding:3px 0}
+  .add-sub{appearance:none;font:inherit;font-size:12px;font-weight:500;color:var(--ink2);cursor:pointer;
+    height:32px;border-radius:9px;background:none;display:flex;align-items:center;justify-content:center;gap:5px;
+    border:1px dashed var(--stroke)}
+  .add-sub:hover{background:var(--fill-weak)}
+  .add-sub:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .add-sub svg{width:11px;height:11px}
+  .add-form{display:none;flex-direction:column;gap:10px;padding:12px;border-radius:11px;
+    background:var(--fill-weak);border:1px solid var(--stroke)}
+  .add-form.is-open{display:flex}
+  .add-form .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .checks{display:flex;flex-direction:column;gap:6px}
+  .check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink);cursor:pointer}
+  .check input{appearance:none;width:15px;height:15px;border-radius:4px;border:1px solid var(--stroke);
+    background:var(--fill-weak);margin:0;cursor:pointer;display:grid;place-items:center;flex:0 0 15px}
+  .check input:checked{background:var(--accent);border-color:transparent}
+  .check input:checked::after{content:"";width:7px;height:4px;border-left:2px solid #fff;border-bottom:2px solid #fff;
+    transform:rotate(-45deg) translate(1px,-1px)}
+  .check .sub2{font-size:11px;color:var(--ink3)}
+  .hint{font-size:11px;line-height:1.5;color:var(--ink3);margin:0}
+
+  .privacy{font-size:11px;color:var(--ink3);text-align:center;padding-top:2px;margin:0}
+  .proto-note{width:640px;max-width:100%;margin:2px 0 0;font-size:11px;line-height:1.75;color:var(--ink2);text-align:left}
+
+  /* 底栏 */
+  .footer{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 20px;
+    border-top:1px solid var(--stroke);background:var(--window)}
+  .footer .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:0 0 6px}
+  .footer .status{font-size:12px;font-weight:500;color:var(--ink2)}
+  .footer .sp{flex:1}
+  .footer .ok{font-size:11px;color:var(--ink3)}
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important}
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-bar">
+  <span class="label">原型 · 状态</span>
+  <button class="chip" data-view="default" aria-pressed="true">默认</button>
+  <button class="chip" data-view="edit" aria-pressed="false">编辑文案</button>
+  <button class="chip" data-view="many" aria-pressed="false">多张卡</button>
+  <button class="chip" data-view="times" aria-pressed="false">指定时刻</button>
+  <button class="chip" data-view="schedule" aria-pressed="false">日程</button>
+  <button class="chip" data-view="addsub" aria-pressed="false">添加订阅</button>
+  <button class="chip" data-view="list" aria-pressed="false">今日列表</button>
+  <button class="chip" data-view="app" aria-pressed="false">通用</button>
+  <span class="spacer"></span>
+  <span class="label">外观</span>
+  <button class="chip" data-theme-set="light" aria-pressed="true">浅色</button>
+  <button class="chip" data-theme-set="dark" aria-pressed="false">深色</button>
+</div>
+
+<div class="window">
+  <div class="titlebar">
+    <div class="lights"><i></i><i></i><i></i></div>
+    <div class="title">Barge In</div>
+  </div>
+
+  <div class="tabbar">
+    <div class="seg tabs" role="tablist" aria-label="设置分区">
+      <button role="tab" data-tab="water" aria-selected="true">喝水</button>
+      <button role="tab" data-tab="activity" aria-selected="false">活动</button>
+      <button role="tab" data-tab="schedule" aria-selected="false">日程</button>
+      <button role="tab" data-tab="app" aria-selected="false">通用</button>
+    </div>
+  </div>
+
+  <div class="pages">
+
+    <!-- ══ 喝水 / 活动：同一套骨架，只有文案与最后一张卡不同 ══ -->
+    <section class="page is-active" id="pageWater" role="tabpanel" aria-label="喝水">
+      <div class="scroll">
+        <div class="scene-bar">
+          <span class="summary" data-summary></span>
+          <span class="sp"></span>
+          <span class="label">启用</span>
+          <button class="switch" role="switch" aria-checked="true" aria-label="启用喝水场景"></button>
+        </div>
+
+        <section class="card" data-preset-card>
+          <div class="card-head"><h2>提醒预设</h2></div>
+          <div class="presets" data-presets></div>
+          <div class="preset-actions" data-actions>
+            <button class="act" data-act="edit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/></svg>
+              编辑文案
+            </button>
+            <button class="act" data-act="preview">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>
+              预览
+            </button>
+            <button class="act" data-act="copy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 9V6.5A2.5 2.5 0 0 0 12.5 4h-6A2.5 2.5 0 0 0 4 6.5v6A2.5 2.5 0 0 0 6.5 15H9"/></svg>
+              复制
+            </button>
+            <span class="sp"></span>
+            <button class="act danger" data-confirm-delete hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V5h5v2M6.5 7l.9 12.2A2 2 0 0 0 9.4 21h5.2a2 2 0 0 0 2-1.8L17.5 7"/></svg>
+              删除
+            </button>
+          </div>
+
+          <div class="editor" data-editor>
+            <div class="editor-head">
+              <span class="t" data-editor-title>编辑 · 大字墙</span>
+              <button class="link">恢复默认文案</button>
+            </div>
+            <label class="field" data-name-field hidden>
+              <span class="field-label">名称</span>
+              <input type="text" value="大字墙 副本">
+            </label>
+            <div class="field-row" data-slot="strength">
+              <span class="field-label">强度</span>
+              <div class="seg" role="radiogroup" aria-label="强度">
+                <button role="radio" aria-checked="true">标准</button>
+                <button role="radio" aria-checked="false">强硬</button>
+              </div>
+            </div>
+            <p class="hint" data-slot="strength">强硬不可推迟，中断按钮锁定 5 秒起；标准可以推迟 5 分钟。</p>
+            <div class="field-row" data-slot="crack">
+              <span class="field-label">裂纹</span>
+              <div class="seg" role="radiogroup" aria-label="裂纹">
+                <button role="radio" aria-checked="true">固定</button>
+                <button role="radio" aria-checked="false">每次不同</button>
+              </div>
+            </div>
+            <p class="hint" data-slot="crack">每次提醒换一套碎片花纹；固定时预览与到点完全一致。</p>
+            <label class="field" data-slot="word">
+              <span class="field-label">大字词</span>
+              <input type="text" value="该喝水了">
+            </label>
+            <label class="field" data-slot="title">
+              <span class="field-label">标题</span>
+              <input type="text" value="该喝水了">
+            </label>
+            <label class="field" data-slot="progress">
+              <span class="field-label">进度</span>
+              <input type="text" value="{consumed} / {target} ml">
+            </label>
+            <div class="vars" data-vars></div>
+          </div>
+
+          <p class="notice" data-notice hidden>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 1.5 21h21L12 2Zm1 15h-2v-2h2v2Zm0-4h-2V8h2v5Z"/></svg>
+            <span>跳过 3 次，中断按钮延迟 10 秒</span>
+          </p>
+        </section>
+
+        <section class="card" data-rhythm>
+          <div class="card-head"><h2>节奏</h2></div>
+          <div class="seg" role="radiogroup" aria-label="节奏方式">
+            <button role="radio" aria-checked="true" data-rhythm-mode="interval">固定间隔</button>
+            <button role="radio" aria-checked="false" data-rhythm-mode="times">指定时刻</button>
+          </div>
+
+          <div data-rhythm-interval>
+            <div class="row">
+              <span class="t">间隔</span><span class="sp"></span>
+              <span class="stepper">
+                <span class="val"><b class="num">60</b><span>分钟</span></span>
+                <span class="btns">
+                  <button class="circ" aria-label="减少间隔"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+                  <button class="circ" aria-label="增加间隔"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+                </span>
+              </span>
+            </div>
+            <p class="note">从工作时段开始按间隔铺开，最后一个点不会越过结束时间。</p>
+          </div>
+
+          <div data-rhythm-times hidden style="display:flex;flex-direction:column;gap:8px">
+            <div class="times">
+              <div class="time-row">
+                <button class="ghost num" aria-label="第 1 次 09:30">09:30<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+                <button class="del" data-confirm-delete aria-label="删除 09:30">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V5h5v2M6.5 7l.9 12.2A2 2 0 0 0 9.4 21h5.2a2 2 0 0 0 2-1.8L17.5 7"/></svg>
+                </button>
+              </div>
+              <div class="time-row">
+                <button class="ghost num" aria-label="第 2 次 20:00">20:00<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+                <button class="del" data-confirm-delete aria-label="删除 20:00">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V5h5v2M6.5 7l.9 12.2A2 2 0 0 0 9.4 21h5.2a2 2 0 0 0 2-1.8L17.5 7"/></svg>
+                </button>
+              </div>
+            </div>
+            <p class="notice">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 1.5 21h21L12 2Zm1 15h-2v-2h2v2Zm0-4h-2V8h2v5Z"/></svg>
+              <span>20:00 不在工作时段内，不会提醒</span>
+            </p>
+            <button class="add-time">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              添加时刻
+            </button>
+          </div>
+        </section>
+
+        <section class="card" data-water>
+          <div class="card-head"><h2>喝水</h2></div>
+          <div class="row">
+            <span class="t">日目标</span><span class="sp"></span>
+            <span class="stepper">
+              <span class="val"><b class="num">2000</b><span>ml</span></span>
+              <span class="btns">
+                <button class="circ" aria-label="减少日目标"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+                <button class="circ" aria-label="增加日目标"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+              </span>
+            </span>
+          </div>
+          <div class="row">
+            <span class="t">单杯量</span><span class="sp"></span>
+            <span class="stepper">
+              <span class="val"><b class="num">250</b><span>ml</span></span>
+              <span class="btns">
+                <button class="circ" aria-label="减少单杯量"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+                <button class="circ" aria-label="增加单杯量"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+              </span>
+            </span>
+          </div>
+          <p class="note">达标后当天不再提醒，次日 0 点自动重置。</p>
+        </section>
+      </div>
+    </section>
+
+    <section class="page" id="pageActivity" role="tabpanel" aria-label="活动">
+      <div class="scroll">
+        <div class="scene-bar">
+          <span class="summary" data-summary></span>
+          <span class="sp"></span>
+          <span class="label">启用</span>
+          <button class="switch" role="switch" aria-checked="true" aria-label="启用活动场景"></button>
+        </div>
+        <div data-slot-presets></div>
+        <div data-slot-rhythm></div>
+      </div>
+    </section>
+
+    <section class="page" id="pageSchedule" role="tabpanel" aria-label="日程">
+      <div class="scroll">
+        <div class="scene-bar">
+          <span class="summary" data-summary></span>
+          <span class="sp"></span>
+          <span class="label">启用</span>
+          <button class="switch" role="switch" aria-checked="false" aria-label="启用日程场景"></button>
+        </div>
+        <div data-slot-presets></div>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>订阅</h2>
+            <div class="head-right">
+              <span class="foot">2 个来源 · 3 分钟前同步</span>
+              <button class="link">立即刷新</button>
+            </div>
+          </div>
+
+          <div class="subs">
+            <div class="sub">
+              <span class="state"></span>
+              <div class="body">
+                <span class="name">钉钉 · 工作日历</span>
+                <span class="meta">CalDAV · 3 本日历 · 3 分钟前同步</span>
+              </div>
+              <button class="peek" data-peek aria-expanded="false" aria-controls="events-ding">
+                今日 3 场
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5.5 15.5 12 9 18.5"/></svg>
+              </button>
+              <button class="switch" role="switch" aria-checked="true" aria-label="启用钉钉日历"></button>
+              <button class="del" data-confirm-delete aria-label="删除钉钉订阅">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V5h5v2M6.5 7l.9 12.2A2 2 0 0 0 9.4 21h5.2a2 2 0 0 0 2-1.8L17.5 7"/></svg>
+              </button>
+            </div>
+
+            <div class="sub-events" id="events-ding">
+              <div class="sub-ev is-past"><span class="t">09:30</span><span class="n">晨会</span><span class="loc">会议室 A</span></div>
+              <div class="sub-ev"><span class="t">14:00</span><span class="n">和设计过一版原型</span></div>
+              <div class="sub-ev"><span class="t">16:30</span><span class="n">周会</span><span class="loc">飞书会议</span></div>
+            </div>
+
+            <div class="sub is-stale">
+              <span class="state"></span>
+              <div class="body">
+                <span class="name">工作邮箱日历</span>
+                <span class="meta">日历地址 · 认证失败，检查用户名或密码 · 6 小时前</span>
+              </div>
+              <button class="peek" data-peek aria-expanded="false" aria-controls="events-mail">
+                今日 0 场
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5.5 15.5 12 9 18.5"/></svg>
+              </button>
+              <button class="switch" role="switch" aria-checked="false" aria-label="启用工作邮箱日历"></button>
+              <button class="del" data-confirm-delete aria-label="删除工作邮箱日历">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V5h5v2M6.5 7l.9 12.2A2 2 0 0 0 9.4 21h5.2a2 2 0 0 0 2-1.8L17.5 7"/></svg>
+              </button>
+            </div>
+
+            <div class="sub-events" id="events-mail">
+              <div class="sub-empty">今天没有日程</div>
+            </div>
+          </div>
+
+          <button class="add-sub" id="openAdd">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            添加订阅
+          </button>
+
+          <div class="add-form" id="addForm">
+            <div class="seg" role="radiogroup" aria-label="订阅类型" id="subKind" style="height:30px">
+              <button role="radio" aria-checked="true" data-kind="caldav">CalDAV 账户</button>
+              <button role="radio" aria-checked="false" data-kind="ics">日历地址</button>
+            </div>
+
+            <div class="field" id="formCaldav" style="gap:8px">
+              <label class="field">
+                <span class="field-label">服务器</span>
+                <input type="text" value="https://calendar.dingtalk.com">
+              </label>
+              <div class="row2">
+                <label class="field"><span class="field-label">账号</span><input type="text" value="u_wnk2f****"></label>
+                <label class="field"><span class="field-label">密码</span><input type="password" value="mypassword"></label>
+              </div>
+              <div><button class="ghost">连接</button></div>
+            </div>
+
+            <div class="field" id="formIcs" style="gap:8px" hidden>
+              <label class="field">
+                <span class="field-label">日历地址</span>
+                <input type="text" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics">
+              </label>
+              <div class="row2">
+                <label class="field"><span class="field-label">用户名（可选）</span><input type="text" value=""></label>
+                <label class="field"><span class="field-label">密码（可选）</span><input type="password" value=""></label>
+              </div>
+              <div><button class="ghost">连接并保存</button></div>
+            </div>
+
+            <div class="field" id="discovered" style="gap:8px" hidden>
+              <span class="field-label">发现 3 本日历 · 选要提醒的</span>
+              <div class="checks">
+                <label class="check"><input type="checkbox" checked><span>主日历<span class="sub2"> · 12 个事件</span></span></label>
+                <label class="check"><input type="checkbox" checked><span>工作日历<span class="sub2"> · 48 个事件</span></span></label>
+                <label class="check"><input type="checkbox"><span>订阅：节假日<span class="sub2"> · 只读</span></span></label>
+              </div>
+              <div class="row" style="gap:8px">
+                <button class="ghost">保存</button>
+                <button class="ghost" id="cancelAdd" style="background:none;border-color:transparent;color:var(--ink2)">取消</button>
+              </div>
+            </div>
+
+            <p class="hint">钉钉：日历设置 → 同步 → 同步到其他日历 → 获取 CalDAV 账号 · 企业微信 caldav.wecom.work · 飞书 caldav.feishu.cn</p>
+          </div>
+
+          <p class="note">只读：Barge In 只做读取（GET / PROPFIND / REPORT），从不写回，也不上传任何内容。</p>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2>前置</h2></div>
+          <div class="row">
+            <span class="t">事件开始前</span>
+            <span class="sp"></span>
+            <span class="stepper">
+              <span class="val"><b class="num">5</b><span>分钟</span></span>
+              <span class="btns">
+                <button class="circ" aria-label="减少前置分钟"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+                <button class="circ" aria-label="增加前置分钟"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+              </span>
+            </span>
+          </div>
+          <p class="note">全天事件不提醒；已经开始超过 10 分钟的事件不补提醒；重复事件按规则展开。</p>
+        </section>
+
+        <p class="privacy">日程不受工作时段与休息日约束，免打扰仍然生效</p>
+      </div>
+    </section>
+
+    <section class="page" id="pageApp" role="tabpanel" aria-label="通用">
+      <div class="scroll">
+        <section class="card">
+          <div class="card-head"><h2>时间</h2><span class="foot">9 小时</span></div>
+          <div class="row" style="gap:18px">
+            <button class="ghost num">开始 · 09:00</button>
+            <button class="ghost num">结束 · 18:00</button>
+          </div>
+          <hr class="sep">
+          <div class="row">
+            <span class="t">休息日</span><span class="sp"></span>
+            <span class="pills">
+              <button class="day" aria-pressed="false" aria-label="周一">一</button>
+              <button class="day" aria-pressed="false" aria-label="周二">二</button>
+              <button class="day" aria-pressed="false" aria-label="周三">三</button>
+              <button class="day" aria-pressed="false" aria-label="周四">四</button>
+              <button class="day" aria-pressed="false" aria-label="周五">五</button>
+              <button class="day" aria-pressed="true" aria-label="周六">六</button>
+              <button class="day" aria-pressed="true" aria-label="周日">日</button>
+            </span>
+          </div>
+          <p class="note">喝水与活动共用这套时间；日程按事件自己的时间提醒，不受这里约束。</p>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2>通用</h2></div>
+          <div class="row">
+            <span class="txt"><span class="t">开机时启动</span><span class="h">登录后在菜单栏静默启动，不打开窗口</span></span>
+            <span class="sp"></span>
+            <button class="switch" role="switch" aria-checked="true" aria-label="开机时启动"></button>
+          </div>
+        </section>
+
+        <p class="privacy">零权限 · 数据只保存在本机；日程订阅是唯一联网功能，只读</p>
+      </div>
+    </section>
+
+  </div>
+
+  <footer class="footer">
+    <span class="dot"></span>
+    <span class="status">下一次提醒 · 喝水 明天 9:00</span>
+    <span class="sp"></span>
+    <span class="ok">改动即时生效</span>
+  </footer>
+</div>
+
+<p class="proto-note">
+  这一版动了六处结构：① 第四个 tab 从「设置」改名「通用」，场景与 App 级设置不再同名；② 每个场景页顶部只留一句说明 + 启用开关，场景名只在 tab 上出现一次；
+  ③ 预设卡换成真实呈现的微缩图（大字墙的重复大字、温柔的右上卡片、碎裂的裂纹），替掉「图标 + 一句话」；④ 编辑 / 预览 / 复制 / 删除收到选中卡下方的一行动作，删掉每张卡上三个图标按钮；
+  ⑤ 取消「全部预设」二级页，所有卡就在首页网格里往下排，复制出来的卡当场看得见；⑥ 窗口宽固定、高跟着内容走，通用页不再留 3/5 的空白。
+  细节：删除入口一律先安静再危险（第一下变「确认删除」），指定时刻收成一个列表（时间在左、删除在右、行间有分隔线），不再每行一个红底垃圾桶、左右两截；输入框只有一种皮肤；字号收成 11 / 12 / 13 三档。
+</p>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const root = document.documentElement;
+  if (params.get('theme') === 'dark') root.dataset.theme = 'dark';
+
+  const SCENES = {
+    water: {
+      title: '喝水',
+      summary: '按节奏提醒，累计今天喝到多少',
+      word: '该喝水了',
+      title2: '该喝水了',
+      progress: '1,000 / 2,000 ml',
+      vars: ['{consumed}', '{target}', '{remaining}']
+    },
+    activity: {
+      title: '活动',
+      summary: '到点起身舒展，不设每日目标',
+      word: '该活动了',
+      title2: '该活动了',
+      progress: '站起来，活动 1 分钟',
+      vars: []
+    },
+    schedule: {
+      title: '日程',
+      summary: '按你订阅的日历提醒：事件开始前把你还给你',
+      word: 'Q4 产品评审',
+      title2: 'Q4 产品评审',
+      progress: '9:30 开始 · 还有 5 分钟',
+      vars: ['{title}', '{start}', '{minutes}', '{location}']
+    }
+  };
+
+  // 三套呈现 + 用户复制出来的实例。卡片的形状由 preset 决定，内容由场景决定。
+  const BASE = [
+    { key: 'wall', preset: 'wall', name: '大字墙', desc: '满屏重复大字 · 渐强音' },
+    { key: 'gentle', preset: 'gentle', name: '温柔', desc: '右上角小卡片 · 一声提示音' },
+    { key: 'shatter', preset: 'shatter', name: '碎裂', desc: '屏幕炸开 · 玻璃碎音' }
+  ];
+  const COPIES = [
+    { key: 'wall2', preset: 'wall', name: '大字墙 副本', desc: '复制自大字墙 · 强硬', copy: true },
+    { key: 'cocky', preset: 'wall', name: '毒舌版', desc: '复制自大字墙 · 措辞更冲', copy: true },
+    { key: 'minimal', preset: 'gentle', name: '极简版', desc: '复制自温柔 · 只留一句', copy: true },
+    { key: 'evening', preset: 'gentle', name: '下班版', desc: '复制自温柔 · 晚上用', copy: true },
+    { key: 'standup', preset: 'wall', name: '站会版', desc: '复制自大字墙 · 短句', copy: true },
+    { key: 'pomodoro', preset: 'wall', name: '番茄钟', desc: '复制自大字墙 · 25 分钟', copy: true }
+  ];
+
+  // 选中的卡按场景分开记：一个场景的选用不该跟着另一个场景走
+  const state = { scene: 'water', many: false, editing: false, times: false,
+    selected: { water: 0, activity: 0, schedule: 0 } };
+  const selIndex = () => state.selected[state.scene] ?? 0;
+
+  const $ = (s) => document.querySelector(s);
+  const page = () => $('#page' + state.scene[0].toUpperCase() + state.scene.slice(1));
+  const scene = () => SCENES[state.scene];
+  const cards = () => state.many ? BASE.concat(COPIES) : BASE;
+
+  function mockHTML(kind) {
+    const s = scene();
+    if (kind === 'gentle') {
+      return `<div class="mock" data-kind="gentle"><div class="mini-card"><i></i><i></i><i class="short"></i></div></div>`;
+    }
+    if (kind === 'shatter') {
+      return `<div class="mock" data-kind="shatter">
+        <span class="glow"></span>
+        <svg class="cracks" viewBox="0 0 180 66" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M90 36 62 6M90 36 38 24M90 36 54 62M90 36 122 4M90 36 138 22M90 36 128 62M90 36 164 40M90 36 26 48"/>
+        </svg>
+        <span class="mock-title">${s.title2}</span>
+      </div>`;
+    }
+    return `<div class="mock" data-kind="wall">
+      <span class="big">${s.word}</span>
+      <span class="big dim">${s.word}</span>
+      <span class="big dimmer">${s.word}</span>
+    </div>`;
+  }
+
+  const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7"/></svg>';
+
+  function renderPresets() {
+    const p = page();
+    const grid = p.querySelector('[data-presets]');
+    if (!grid) return;
+    const list = cards();
+    if (selIndex() >= list.length) state.selected[state.scene] = 0;
+
+    grid.innerHTML = list.map((c, i) => {
+      const active = i === selIndex();
+      return `<div class="preset${active ? ' is-selected' : ''}" role="radio" aria-checked="${active}"
+        tabindex="0" data-index="${i}">
+        ${mockHTML(c.preset)}
+        <div class="preset-name">${c.name}${active ? `<span class="picked">${CHECK}</span>` : ''}</div>
+        <div class="preset-desc">${c.desc}</div>
+      </div>`;
+    }).join('');
+
+    grid.querySelectorAll('[data-index]').forEach(el => {
+      const pick = () => { state.selected[state.scene] = Number(el.dataset.index); state.editing = false; render(); };
+      el.addEventListener('click', pick);
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); }
+      });
+    });
+
+    // 动作只作用于当前这张卡；内置预设不给删除
+    p.querySelector('.act.danger').hidden = !list[selIndex()]?.copy;
+    renderEditor();
+  }
+
+  function renderEditor() {
+    const p = page();
+    const card = cards()[selIndex()] || BASE[0];
+    const editor = p.querySelector('[data-editor]');
+    editor.classList.toggle('is-open', state.editing);
+    if (!state.editing) return;
+
+    p.querySelector('[data-editor-title]').textContent = `编辑 · ${card.name}`;
+    p.querySelector('[data-name-field]').hidden = !card.copy;
+
+    const slots = {
+      wall: ['strength', 'word', 'progress'],
+      gentle: ['title', 'progress'],
+      shatter: ['crack', 'title', 'progress']
+    }[card.preset];
+
+    editor.querySelectorAll('[data-slot]').forEach(el => {
+      el.hidden = !slots.includes(el.dataset.slot);
+    });
+    editor.querySelectorAll('[data-slot="word"] input').forEach(i => i.value = scene().word);
+    editor.querySelectorAll('[data-slot="title"] input').forEach(i => i.value = scene().title2);
+    editor.querySelectorAll('[data-slot="progress"] input').forEach(i => i.value = scene().progress);
+
+    const vars = editor.querySelector('[data-vars]');
+    const names = scene().vars;
+    vars.innerHTML = names.length
+      ? `<span class="k">可用变量</span>${names.map(n => `<code>${n}</code>`).join('')}`
+      : `<span class="k">这个场景的文案没有变量</span>`;
+  }
+
+  // 活动页与喝水页是同一套骨架：把喝水页的预设卡、节奏卡搬过去，只换场景文案
+  function buildScenes() {
+    const donor = $('#pageWater');
+    const presetTpl = donor.querySelector('[data-preset-card]');
+    const rhythmTpl = donor.querySelector('[data-rhythm]');
+    document.querySelectorAll('[data-slot-presets]').forEach(slot => {
+      slot.replaceWith(presetTpl.cloneNode(true));
+    });
+    // 日程没有节奏卡：节奏是日历本身
+    document.querySelectorAll('[data-slot-rhythm]').forEach(slot => {
+      slot.replaceWith(rhythmTpl.cloneNode(true));
+    });
+  }
+  buildScenes();
+
+  function renderSceneBits() {
+    const p = page();
+    const s = scene();
+    const summary = p.querySelector('[data-summary]');
+    if (summary) summary.textContent = s.summary;
+  }
+
+  function render() {
+    document.querySelectorAll('.page').forEach(el => el.classList.remove('is-active'));
+    page().classList.add('is-active');
+    document.querySelectorAll('[data-tab]').forEach(b =>
+      b.setAttribute('aria-selected', String(b.dataset.tab === state.scene)));
+
+    // 喝水页的水量卡只属于喝水
+    const waterCard = $('#pageWater [data-water]');
+    if (waterCard) waterCard.hidden = state.scene !== 'water';
+
+    const rhythm = page().querySelector('[data-rhythm]');
+    if (rhythm) {
+      rhythm.querySelectorAll('[data-rhythm-mode]').forEach(b => {
+        const times = b.dataset.rhythmMode === 'times';
+        b.setAttribute('aria-checked', String(times === state.times));
+      });
+      const interval = rhythm.querySelector('[data-rhythm-interval]');
+      const times = rhythm.querySelector('[data-rhythm-times]');
+      if (interval) interval.hidden = state.times;
+      if (times) times.hidden = !state.times;
+    }
+
+    renderSceneBits();
+    if (state.scene !== 'app') renderPresets();
+  }
+  // ── tab ──
+  document.querySelectorAll('[data-tab]').forEach(b =>
+    b.addEventListener('click', () => {
+      state.scene = b.dataset.tab;
+      state.editing = false;
+      render();
+    }));
+
+  // ── 动作行：只作用于当前选中的那张卡 ──
+  document.addEventListener('click', (e) => {
+    const act = e.target.closest('[data-act]');
+    if (!act) return;
+    if (act.dataset.act === 'edit') {
+      state.editing = !state.editing;
+      render();
+    } else if (act.dataset.act === 'copy') {
+      state.many = true;
+      render();
+    } else if (act.dataset.act === 'preview') {
+      const old = act.innerHTML;
+      act.textContent = '已预览';
+      setTimeout(() => { act.innerHTML = old; }, 900);
+    }
+  });
+
+  // ── 两段式删除：第一下换成「确认删除」，第二下才删；同一时刻只有一个在确认 ──
+  function resetDelete(btn) {
+    if (!btn.classList.contains('is-confirming')) return;
+    btn.classList.remove('is-confirming');
+    if (btn.dataset.original != null) btn.innerHTML = btn.dataset.original;
+  }
+
+  document.querySelectorAll('[data-confirm-delete]').forEach(btn => {
+    btn.dataset.original = btn.innerHTML;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (btn.classList.contains('is-confirming')) {
+        resetDelete(btn);
+        btn.textContent = '已删除';
+        setTimeout(() => { btn.innerHTML = btn.dataset.original; }, 1400);
+        return;
+      }
+      document.querySelectorAll('.is-confirming').forEach(resetDelete);
+      btn.classList.add('is-confirming');
+      btn.textContent = '确认删除';
+    });
+  });
+
+  // ── 节奏方式 ──
+  document.querySelectorAll('[data-rhythm-mode]').forEach(b =>
+    b.addEventListener('click', () => { state.times = b.dataset.rhythmMode === 'times'; render(); }));
+
+  // ── 今日列表 ──
+  document.querySelectorAll('[data-peek]').forEach(b =>
+    b.addEventListener('click', () => {
+      const open = b.getAttribute('aria-expanded') === 'true';
+      b.setAttribute('aria-expanded', String(!open));
+      const panel = document.getElementById(b.getAttribute('aria-controls'));
+      if (panel) panel.classList.toggle('is-open', !open);
+    }));
+
+  // ── 添加订阅 ──
+  const addForm = $('#addForm');
+  const openAdd = $('#openAdd');
+  function setAddForm(open) {
+    addForm.classList.toggle('is-open', open);
+    openAdd.innerHTML = open
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>收起'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>添加订阅';
+  }
+  openAdd.addEventListener('click', () => setAddForm(!addForm.classList.contains('is-open')));
+  $('#cancelAdd')?.addEventListener('click', () => setAddForm(false));
+
+  document.querySelectorAll('#subKind [data-kind]').forEach(b =>
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#subKind [data-kind]').forEach(o =>
+        o.setAttribute('aria-checked', String(o === b)));
+      const caldav = b.dataset.kind === 'caldav';
+      $('#formCaldav').hidden = !caldav;
+      $('#formIcs').hidden = caldav;
+    }));
+
+  // ── 状态直链（截图用） ──
+  const VIEWS = {
+    default: () => { state.scene = 'water'; state.many = false; state.editing = false; },
+    edit: () => { state.scene = 'water'; state.many = false; state.editing = true; },
+    many: () => { state.scene = 'water'; state.many = true; state.editing = false; },
+    times: () => { state.scene = 'water'; state.many = false; state.times = true; },
+    schedule: () => { state.scene = 'schedule'; },
+    addsub: () => { state.scene = 'schedule'; setAddForm(true); },
+    list: () => {
+      state.scene = 'schedule';
+      const ding = document.querySelector('#events-ding');
+      ding.classList.add('is-open');
+      document.querySelector('[aria-controls="events-ding"]').setAttribute('aria-expanded', 'true');
+    },
+    app: () => { state.scene = 'app'; },
+    all: () => { state.scene = 'water'; state.many = true; }   // 旧直链
+  };
+
+  function applyView(key) {
+    (VIEWS[key] || VIEWS.default)();
+    document.querySelectorAll('[data-view]').forEach(b =>
+      b.setAttribute('aria-pressed', String(b.dataset.view === key)));
+    render();
+  }
+
+  document.querySelectorAll('[data-view]').forEach(b =>
+    b.addEventListener('click', () => applyView(b.dataset.view)));
+
+  // ── 外观 ──
+  function syncTheme() {
+    const current = root.dataset.theme || 'light';
+    document.querySelectorAll('[data-theme-set]').forEach(b =>
+      b.setAttribute('aria-pressed', String(b.dataset.themeSet === current)));
+  }
+  document.querySelectorAll('[data-theme-set]').forEach(b =>
+    b.addEventListener('click', () => { root.dataset.theme = b.dataset.themeSet; syncTheme(); }));
+
+  syncTheme();
+  applyView(params.get('view') || 'default');
+})();
+</script>
+</body>
+</html>

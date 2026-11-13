@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Barge In · 菜单栏 popover（原型）</title>
+<style>
+  :root{
+    --surface:#f2f2f1;
+    --stage:#dde1e6;
+    --card:rgba(255,255,255,.78);
+    --stroke:rgba(0,0,0,.08);
+    --ink:#1d1d1f;
+    --ink2:rgba(0,0,0,.55);
+    --accent:#0284c7;
+    --accent-text:#0369a1;
+    --warn:#b45309;
+    --success:#0f766e;
+    --fill:rgba(0,0,0,.05);
+    --fill-strong:rgba(0,0,0,.08);
+    --ring-track:rgba(0,0,0,.07);
+    --btn-tonal-fill:color-mix(in srgb, var(--accent) 16%, transparent);
+    --btn-tonal-fill-hover:color-mix(in srgb, var(--accent) 24%, transparent);
+    --btn-tonal-stroke:color-mix(in srgb, var(--accent) 85%, transparent);
+    --pop-shadow:0 16px 44px rgba(0,0,0,.20), 0 2px 6px rgba(0,0,0,.10);
+  }
+  html[data-theme="dark"]{
+    --surface:#2b2e33;
+    --stage:#101418;
+    --card:rgba(255,255,255,.05);
+    --stroke:rgba(255,255,255,.10);
+    --ink:#f5f5f7;
+    --ink2:rgba(255,255,255,.62);
+    --accent:#38bdf8;
+    --accent-text:#7dd3fc;
+    --warn:#fbbf24;
+    --success:#34d399;
+    --fill:rgba(255,255,255,.06);
+    --fill-strong:rgba(255,255,255,.10);
+    --ring-track:rgba(255,255,255,.07);
+    --btn-tonal-fill:color-mix(in srgb, var(--accent) 16%, transparent);
+    --btn-tonal-fill-hover:color-mix(in srgb, var(--accent) 24%, transparent);
+    --btn-tonal-stroke:color-mix(in srgb, var(--accent) 85%, transparent);
+    --pop-shadow:0 20px 50px rgba(0,0,0,.60), 0 0 0 1px rgba(255,255,255,.05);
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{
+    margin:0;min-height:100vh;color:var(--ink);
+    background:
+      radial-gradient(900px 620px at 26% -6%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%),
+      var(--stage);
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;align-items:center;gap:20px;
+    padding:36px 20px 48px;
+  }
+  .num{font-family:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif;font-variant-numeric:tabular-nums}
+  .icon{display:block;width:12px;height:12px}
+  .sprite{position:absolute;width:0;height:0;overflow:hidden}
+
+  /* ── 原型工具条 ── */
+  .demo-bar{display:flex;flex-direction:column;gap:8px;width:304px;max-width:100%}
+  .chip-row{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+  .chip-row .label{font-size:11px;color:var(--ink2);letter-spacing:.02em;margin-right:2px}
+  .chip-row .spacer{flex:1}
+  .chip{appearance:none;border:1px solid var(--stroke);background:var(--card);color:var(--ink2);
+    font:inherit;font-size:11.5px;padding:4px 10px;border-radius:999px;cursor:pointer;transition:color .12s ease,border-color .12s ease,background .12s ease}
+  .chip:hover{color:var(--ink)}
+  .chip[aria-pressed="true"]{color:var(--accent-text);border-color:color-mix(in srgb, var(--accent) 55%, transparent);
+    background:color-mix(in srgb, var(--accent) 10%, transparent)}
+  .chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* ── popover 外壳 ── */
+  .popover{
+    position:relative;width:304px;padding:18px;border-radius:12px;
+    background:var(--surface);border:1px solid var(--stroke);box-shadow:var(--pop-shadow);
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .popover::before{
+    content:"";position:absolute;top:-7px;left:calc(50% - 7px);width:14px;height:14px;
+    background:var(--surface);border-left:1px solid var(--stroke);border-top:1px solid var(--stroke);
+    border-top-left-radius:2px;transform:rotate(45deg);
+  }
+
+  /* ── 水区 ── */
+  .water{display:flex;flex-direction:column;gap:10px}
+  /* 三个场景都是「名称 + 今天 N」开头：水区没有这块就只剩一个裸环，和另外两张卡对不上 */
+  .scene-line{display:flex;align-items:baseline;gap:6px;padding:0 2px;font-size:12px;font-weight:600}
+  .scene-line .meta{font-size:10.5px;font-weight:400;color:var(--ink2)}
+  .ring-group{display:flex;flex-direction:column;align-items:center;gap:9px}
+
+  .ring{
+    position:relative;width:140px;height:140px;border-radius:50%;
+    cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;outline:none;
+    transition:transform .12s ease;
+  }
+  .ring:active{transform:scale(.985)}
+  .ring:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent)}
+  .ring-svg{display:block;width:140px;height:140px;transform:rotate(-90deg)}
+  .ring-track{fill:none;stroke:var(--ring-track);stroke-width:10}
+  .ring-progress{
+    fill:none;stroke-width:10;stroke-linecap:round;
+    transition:stroke-dashoffset .46s cubic-bezier(.34,1.25,.64,1), stroke .18s ease;
+  }
+  .ring:hover .ring-progress{filter:brightness(1.08)}
+  /* 按住时环自己退：不补间 dashoffset，颜色转琥珀 */
+  .ring.is-holding .ring-progress{transition:stroke .18s ease;stroke:var(--warn)}
+  .ring.no-anim .ring-progress{transition:none}
+
+  .ring-core{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    transition:opacity .14s ease;
+  }
+  .ring-amount{display:flex;align-items:baseline;gap:3px}
+  .ring-amount .num{font-size:29px;font-weight:700;line-height:1}
+  .ring-unit{font-size:11px;color:var(--ink2)}
+  .ring-rest{font-size:10.5px;color:var(--ink2)}
+  .ring-hold{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:600;color:var(--warn);opacity:0;transition:opacity .14s ease;
+  }
+  .ring.is-holding .ring-core{opacity:0}
+  .ring.is-holding .ring-hold{opacity:1}
+
+  .ring-hint{
+    position:absolute;left:0;right:0;top:calc(50% - 42px);text-align:center;
+    font-size:10.5px;font-weight:500;color:var(--accent-text);
+    opacity:0;transition:opacity .14s ease;pointer-events:none;
+  }
+  .ring:hover .ring-hint{opacity:1}
+  .ring.is-holding .ring-hint{opacity:0}
+
+  @keyframes bump{0%{transform:scale(1)}38%{transform:scale(1.1)}100%{transform:scale(1)}}
+  .ring-core.is-bump .ring-amount{animation:bump .26s ease}
+
+  .status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);min-height:16px}
+  .status .icon{flex:0 0 auto;width:10px;height:10px;color:var(--accent)}
+  .status.is-success .icon{color:var(--success)}
+  .status.is-warn .icon{color:var(--warn)}
+
+  .ledger{display:flex;align-items:flex-start;gap:6px;font-size:11px;line-height:1.35;color:var(--warn)}
+  .ledger .icon{flex:0 0 auto;width:10px;height:10px;margin-top:2px}
+
+  /* ── 活动 ── */
+  .activity{display:flex;flex-direction:column;gap:8px}
+  .activity-card{
+    display:flex;align-items:center;gap:10px;padding:10px;border-radius:11px;
+    background:var(--card);border:1px solid var(--stroke);
+  }
+  .activity-glyph{display:flex;justify-content:center;flex:0 0 22px;color:var(--accent-text)}
+  .activity-glyph .icon{width:15px;height:15px}
+  .activity-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .activity-title{display:flex;align-items:baseline;gap:5px;font-size:12px;font-weight:600}
+  .activity-title .meta{font-size:10.5px;font-weight:400;color:var(--ink2)}
+  .activity-status{font-size:10.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .activity-status.is-warn{color:var(--warn)}
+  .spacer{flex:1}
+
+  /* ── 次级按钮 ── */
+  .quiet{
+    appearance:none;border:1px solid var(--stroke);background:var(--fill);color:var(--ink);
+    font:inherit;font-size:12.5px;font-weight:500;border-radius:10px;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;
+    transition:background .12s ease, transform .12s ease;
+  }
+  .quiet:hover{background:var(--fill-strong)}
+  .quiet:active{transform:scale(.985)}
+  .quiet:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .quiet .icon{width:11px;height:11px}
+  .activity-btn{flex:0 0 78px;height:30px;font-size:12.5px}
+
+  /* 活动行的"活动了"：卡片上唯一动作，灰底看不出边界，用品牌色调和底 + 实描边 */
+  .activity-btn{
+    background:var(--btn-tonal-fill);border-color:var(--btn-tonal-stroke);
+    color:var(--accent-text);font-weight:600;
+  }
+  .activity-btn:hover{background:var(--btn-tonal-fill-hover)}
+
+  /* ── 底栏 ── */
+  .footer{display:flex;flex-direction:column;gap:8px;margin-top:2px}
+  .divider{height:1px;background:var(--stroke);opacity:.6}
+  .footer-row{display:flex;align-items:center;gap:2px}
+  .footer-btn{
+    appearance:none;border:0;background:none;color:var(--ink2);font:inherit;font-size:11px;
+    padding:5px 7px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;
+    transition:background .12s ease,color .12s ease;
+  }
+  .footer-btn:hover{background:var(--fill-strong);color:var(--ink)}
+  /* 免打扰在底栏：它压过主动作的时候没人看得见环该点。停用中才用强调色，否则就是一句安静的文字入口 */
+  .footer-btn.is-accent{color:var(--accent-text)}
+  .footer-btn.is-accent:hover{background:var(--btn-tonal-fill);color:var(--accent-text)}
+  .footer-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .footer-btn .icon{width:11px;height:11px}
+
+  /* ── 全部停用 ── */
+  .empty{display:flex;align-items:center;gap:7px;padding:6px 0;font-size:12px;color:var(--ink2)}
+  .empty .icon{width:12px;height:12px}
+
+  .prototype-note{max-width:304px;margin:0;font-size:11px;line-height:1.65;color:var(--ink2);text-align:center}
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important}
+  }
+</style>
+</head>
+<body>
+
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-clock" viewBox="0 0 20 20">
+    <circle cx="10" cy="10" r="7.4" fill="none" stroke="currentColor" stroke-width="1.7"/>
+    <path d="M10 5.6V10l3 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="i-play" viewBox="0 0 20 20">
+    <path d="M6.3 3.7 16.1 10 6.3 16.3z" fill="currentColor"/>
+  </symbol>
+  <symbol id="i-gear" viewBox="0 0 20 20">
+    <circle cx="10" cy="10" r="3.1" fill="none" stroke="currentColor" stroke-width="1.7"/>
+    <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M10 2.5v1.8M10 15.7v1.8M2.5 10h1.8M15.7 10h1.8M4.7 4.7l1.3 1.3M14 14l1.3 1.3M15.3 4.7 14 6M6 14l-1.3 1.3"/>
+    </g>
+  </symbol>
+  <symbol id="i-power" viewBox="0 0 20 20">
+    <path d="M10 2.7v6.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    <path d="M5.8 5.4a6.4 6.4 0 1 0 8.4 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="i-walk" viewBox="0 0 20 20">
+    <circle cx="11.7" cy="4.2" r="1.8" fill="currentColor"/>
+    <g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.3 6.7 9.2 11.3"/>
+      <path d="M9.2 11.3 11.1 14.9"/>
+      <path d="M9.2 11.3 6.6 14.7"/>
+      <path d="M10.3 6.7 12.9 9.1"/>
+    </g>
+  </symbol>
+  <symbol id="i-warn" viewBox="0 0 20 20">
+    <path d="M10 2.6 18 16.8H2z" fill="currentColor"/>
+    <path d="M10 7.6v3.9" fill="none" stroke="var(--surface)" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="10" cy="14.1" r=".95" fill="var(--surface)"/>
+  </symbol>
+  <symbol id="i-check" viewBox="0 0 20 20">
+    <circle cx="10" cy="10" r="7.6" fill="currentColor"/>
+    <path d="M6.6 10.3 8.9 12.6l4.7-5" fill="none" stroke="var(--surface)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-reset" viewBox="0 0 20 20">
+    <path d="M3.5 10a6.6 6.6 0 1 0 1.8-4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    <path d="M3.3 3.4v3.7H7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-moon" viewBox="0 0 20 20">
+    <path d="M15.7 12.5A6.6 6.6 0 0 1 7.5 4.3a6.9 6.9 0 1 0 8.2 8.2z" fill="currentColor"/>
+  </symbol>
+  <symbol id="i-calendar" viewBox="0 0 20 20">
+    <rect x="2.8" y="4.6" width="14.4" height="12.6" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+    <path d="M2.8 8.6h14.4M6.6 2.7v3.5M13.4 2.7v3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+  </symbol>
+</svg>
+
+<div class="demo-bar">
+  <div class="chip-row">
+    <span class="label">状态</span>
+    <button class="chip" data-preset="default" aria-pressed="true">默认</button>
+    <button class="chip" data-preset="done" aria-pressed="false">已达标</button>
+    <button class="chip" data-preset="skip" aria-pressed="false">跳过 1 次</button>
+    <button class="chip" data-preset="paused" aria-pressed="false">免打扰中</button>
+    <button class="chip" data-preset="wateroff" aria-pressed="false">喝水停用</button>
+    <button class="chip" data-preset="alloff" aria-pressed="false">都停用</button>
+    <button class="chip" data-preset="schednone" aria-pressed="false">日程·无事件</button>
+    <button class="chip" data-preset="schederror" aria-pressed="false">日程·认证失败</button>
+  </div>
+  <div class="chip-row">
+    <span class="label">外观</span>
+    <button class="chip" data-theme-set="light" aria-pressed="true">浅色</button>
+    <button class="chip" data-theme-set="dark" aria-pressed="false">深色</button>
+  </div>
+</div>
+
+<div class="popover" id="popover">
+
+  <section class="water" id="waterSection">
+    <div class="scene-line"><b>喝水</b></div>
+    <div class="ring-group">
+      <div class="ring" id="ring" role="button" tabindex="0"
+           aria-label="今日已喝 1000 毫升，目标 2000 毫升；点一下记一杯 250 毫升，长按 2 秒清空今日进度"
+           title="点一下记一杯 · 长按 2 秒清空今日进度">
+        <svg class="ring-svg" viewBox="0 0 140 140" aria-hidden="true">
+          <defs>
+            <linearGradient id="waterGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#22D3EE"/>
+              <stop offset="1" stop-color="#0EA5E9"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-track" cx="70" cy="70" r="65"/>
+          <circle class="ring-progress" id="ringProgress" cx="70" cy="70" r="65" stroke="url(#waterGrad)"/>
+        </svg>
+        <div class="ring-core" id="ringCore">
+          <div class="ring-amount"><span class="num" id="mlValue">1,000</span><span class="ring-unit">ml</span></div>
+          <div class="ring-rest" id="ringRest">还差 1,000 ml</div>
+        </div>
+        <div class="ring-hold">松手取消</div>
+        <div class="ring-hint">+250 ml</div>
+      </div>
+    </div>
+
+    <div class="status" id="waterStatus" aria-live="polite">
+      <svg class="icon"><use id="waterStatusIcon" href="#i-clock"/></svg>
+      <span id="waterStatusText">下次 明天 9:00</span>
+    </div>
+
+    <div class="ledger" id="waterLedger" hidden>
+      <svg class="icon"><use href="#i-warn"/></svg>
+      <span id="waterLedgerText">跳过 1 次，中断按钮延迟 5 秒</span>
+    </div>
+  </section>
+
+  <section class="activity" id="activitySection">
+    <div class="activity-card">
+      <span class="activity-glyph"><svg class="icon"><use href="#i-walk"/></svg></span>
+      <div class="activity-text">
+        <div class="activity-title"><b>活动</b><span class="meta" id="activityCount">今天 0 次</span></div>
+        <div class="activity-status" id="activityStatus">下次 明天 10:30</div>
+      </div>
+      <span class="spacer"></span>
+      <button class="quiet activity-btn" id="activityBtn">活动了</button>
+    </div>
+    <div class="ledger" id="activityLedger" hidden>
+      <svg class="icon"><use href="#i-warn"/></svg>
+      <span>跳过 1 次，中断按钮延迟 5 秒</span>
+    </div>
+  </section>
+
+  <section class="activity" id="scheduleSection">
+    <div class="activity-card">
+      <span class="activity-glyph"><svg class="icon"><use href="#i-calendar"/></svg></span>
+      <div class="activity-text">
+        <div class="activity-title"><b>日程</b><span class="meta" id="scheduleMeta">今天 3 场</span></div>
+        <div class="activity-status" id="scheduleStatus">Q4 产品评审 · 9:30 · 5 分钟后</div>
+      </div>
+    </div>
+    <div class="ledger" id="scheduleLedger" hidden>
+      <svg class="icon"><use href="#i-warn"/></svg>
+      <span>跳过 1 次，中断按钮延迟 5 秒</span>
+    </div>
+  </section>
+
+  <div class="empty" id="emptyState" hidden>
+    <svg class="icon"><use href="#i-moon"/></svg>
+    <span>提醒已全部停用</span>
+  </div>
+
+  <footer class="footer">
+    <div class="divider"></div>
+    <div class="footer-row">
+      <button class="footer-btn" id="pauseBtn">
+        <svg class="icon"><use id="pauseIcon" href="#i-moon"/></svg>
+        <span id="pauseLabel">免打扰 1 小时</span>
+      </button>
+      <span class="spacer"></span>
+      <button class="footer-btn"><svg class="icon"><use href="#i-gear"/></svg>设置</button>
+      <button class="footer-btn"><svg class="icon"><use href="#i-power"/></svg>退出</button>
+    </div>
+  </footer>
+
+</div>
+
+<p class="prototype-note">
+  点环记一杯；按住环 2 秒，环从当前进度退到 0 即清空今日进度，中途松手（或移出环外）则恢复。
+  三个场景都有自己的名字；水区不写杯数——一次喝多少不等于一只杯子的容量，计量只用 ml。日期只写到明天 / 周X，状态行不再被截断。
+  日程行只读：显示下一场日程与订阅状态，不给动作按钮；订阅取数失败时状态行转琥珀，提醒照旧按缓存走。
+  免打扰收进底栏：那是全局动作，原来 36pt 整宽的灰底按钮比真正的主动作还重。
+</p>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const root = document.documentElement;
+  if (params.get('theme') === 'dark') root.dataset.theme = 'dark';
+
+  const R = 65;
+  const CIRC = 2 * Math.PI * R;
+  const HOLD_MS = 2000;      // 长按清空所需时长
+  const CLICK_MS = 200;      // 短于这个时长算"点一下"
+  const HINT_MS = 200;       // 超过这个时长才把环中间换成"松手取消"
+  const CLEARED_MS = 2200;   // 清空后状态行停留时长
+  const nf = new Intl.NumberFormat('en-US');
+
+  const $ = (s) => document.querySelector(s);
+  const el = {
+    popover: $('#popover'),
+    water: $('#waterSection'),
+    ring: $('#ring'),
+    progress: $('#ringProgress'),
+    core: $('#ringCore'),
+    ml: $('#mlValue'),
+    rest: $('#ringRest'),
+    status: $('#waterStatus'),
+    statusIcon: $('#waterStatusIcon'),
+    statusText: $('#waterStatusText'),
+    ledger: $('#waterLedger'),
+    ledgerText: $('#waterLedgerText'),
+    activity: $('#activitySection'),
+    activityLedger: $('#activityLedger'),
+    activityCount: $('#activityCount'),
+    activityStatus: $('#activityStatus'),
+    activityBtn: $('#activityBtn'),
+    schedule: $('#scheduleSection'),
+    scheduleMeta: $('#scheduleMeta'),
+    scheduleStatus: $('#scheduleStatus'),
+    scheduleLedger: $('#scheduleLedger'),
+    empty: $('#emptyState'),
+    pauseBtn: $('#pauseBtn'),
+    pauseIcon: $('#pauseIcon'),
+    pauseLabel: $('#pauseLabel')
+  };
+
+  const state = {
+    consumed: 1000,
+    cupML: 250,
+    targetML: 2000,
+    skips: 0,
+    pausedUntil: 0,
+    waterOn: true,
+    activityOn: true,
+    activityDone: 0,
+    activitySkips: 0,
+    scheduleOn: true,
+    scheduleSkips: 0,
+    scheduleState: 'next',
+    clearedUntil: 0
+  };
+
+  // 日程行的三种状态：下一条事件 / 今天没有日程 / 订阅取数失败
+  const SCHEDULE_STATES = {
+    next:  { meta: '今天 3 场', status: 'Q4 产品评审 · 5 分钟后', warn: false },
+    none:  { meta: '今天 0 场', status: '今天没有日程了', warn: false },
+    error: { meta: '2 个地址', status: '认证失败 · 数据可能已过期', warn: true }
+  };
+
+  const PRESETS = {
+    default:   { consumed: 1000, skips: 0, paused: false, waterOn: true,  activityOn: true,  activityDone: 0, scheduleOn: true,  scheduleSkips: 0, scheduleState: 'next' },
+    done:      { consumed: 2000, skips: 0, paused: false, waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleSkips: 0, scheduleState: 'next' },
+    skip:      { consumed: 1000, skips: 1, paused: false, waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleSkips: 1, scheduleState: 'next' },
+    paused:    { consumed: 1000, skips: 0, paused: true,  waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleSkips: 0, scheduleState: 'next' },
+    wateroff:  { consumed: 1000, skips: 0, paused: false, waterOn: false, activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleSkips: 0, scheduleState: 'next' },
+    alloff:    { consumed: 1000, skips: 0, paused: false, waterOn: false, activityOn: false, activityDone: 2, scheduleOn: false, scheduleSkips: 0, scheduleState: 'next' },
+    schednone: { consumed: 1000, skips: 0, paused: false, waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleSkips: 0, scheduleState: 'none' },
+    schederror:{ consumed: 1000, skips: 0, paused: false, waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleSkips: 0, scheduleState: 'error' }
+  };
+
+  const isCompleted = () => state.targetML > 0 && state.consumed >= state.targetML;
+  const progress = () => state.targetML > 0 ? Math.min(1, state.consumed / state.targetML) : 0;
+  const isPaused = () => state.pausedUntil > Date.now();
+  const clock = (ms) => new Date(ms).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+  function setRing(p) {
+    el.progress.setAttribute('stroke-dashoffset', String(CIRC * (1 - p)));
+  }
+
+  function render() {
+    setRing(progress());
+    el.ml.textContent = nf.format(state.consumed);
+    // 环里只放"今天的数 + 还差多少"：目标值挪到设置里，环中心不再重复同一个数字
+    el.rest.textContent = isCompleted()
+      ? '已达标'
+      : `还差 ${nf.format(Math.max(0, state.targetML - state.consumed))} ml`;
+    el.ring.setAttribute('aria-label',
+      `今日已喝 ${state.consumed} 毫升，目标 ${state.targetML} 毫升；点一下记一杯 ${state.cupML} 毫升，长按 2 秒清空今日进度`);
+
+    const now = Date.now();
+    let text, icon, success = false;
+    if (state.clearedUntil > now) {
+      text = '已清空今日进度';
+      icon = '#i-reset';
+    } else if (isPaused()) {
+      text = `免打扰至 ${clock(state.pausedUntil)} · ${Math.max(1, Math.round((state.pausedUntil - now) / 60000))} 分钟后恢复`;
+      icon = '#i-moon';
+    } else if (isCompleted()) {
+      // 达标由环里的"已达标"和绿勾说明，状态行回到日程本身
+      text = '下次 明天 9:00';
+      icon = '#i-check';
+      success = true;
+    } else {
+      // 日期只到「明天 / 周X」，绝不印月日：卡片里那一列放不下
+      text = '下次 15:00 · 18 分钟后';
+      icon = '#i-clock';
+    }
+    el.statusText.textContent = text;
+    el.statusIcon.setAttribute('href', icon);
+    el.status.classList.toggle('is-success', success);
+
+    el.ledger.hidden = !(state.skips > 0 && !isCompleted());
+    el.ledgerText.textContent = state.skips === 1
+      ? '跳过 1 次，中断按钮延迟 5 秒'
+      : `跳过 ${state.skips} 次，中断按钮延迟 10 秒`;
+
+    el.water.hidden = !state.waterOn;
+    el.activity.hidden = !state.activityOn;
+    el.schedule.hidden = !state.scheduleOn;
+    el.empty.hidden = state.waterOn || state.activityOn || state.scheduleOn;
+    el.pauseBtn.hidden = !(state.waterOn || state.activityOn || state.scheduleOn);
+
+    el.activityCount.textContent = `今天 ${state.activityDone} 次`;
+    el.activityStatus.textContent = isPaused() ? '免打扰中' : '下次 明天 10:30';
+    el.activityLedger.hidden = !(state.activitySkips > 0);
+
+    const sch = SCHEDULE_STATES[state.scheduleState];
+    el.scheduleMeta.textContent = sch.meta;
+    el.scheduleStatus.textContent = isPaused() ? '免打扰中' : sch.status;
+    el.scheduleStatus.classList.toggle('is-warn', !isPaused() && sch.warn);
+    el.scheduleLedger.hidden = !(state.scheduleSkips > 0);
+
+    el.pauseLabel.textContent = isPaused() ? '恢复提醒' : '免打扰 1 小时';
+    el.pauseIcon.setAttribute('href', isPaused() ? '#i-play' : '#i-moon');
+    el.pauseBtn.classList.toggle('is-accent', isPaused());
+  }
+
+  // ── 记一杯 ──
+  function drink() {
+    state.consumed = Math.max(0, state.consumed + state.cupML);
+    state.skips = Math.max(0, state.skips - 1);
+    state.clearedUntil = 0;
+    render();
+    el.core.classList.remove('is-bump');
+    void el.core.offsetWidth;
+    el.core.classList.add('is-bump');
+  }
+
+  // ── 长按清空 ──
+  let press = null;
+
+  function beginHold(e) {
+    if (!state.waterOn || press) return;
+    e.preventDefault();
+    if (el.ring.setPointerCapture) {
+      try { el.ring.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+    press = { t0: performance.now(), p0: progress(), cleared: false, raf: 0, hinted: false };
+    if (press.p0 > 0) press.raf = requestAnimationFrame(tick);
+  }
+
+  function tick() {
+    if (!press || press.cleared) return;
+    const elapsed = performance.now() - press.t0;
+    const t = Math.min(1, elapsed / HOLD_MS);
+    if (press.p0 > 0) {
+      if (!press.hinted && elapsed >= HINT_MS) {
+        press.hinted = true;
+        el.ring.classList.add('is-holding');
+      }
+      setRing(press.p0 * (1 - t));
+    }
+    if (t >= 1) { confirmClear(); return; }
+    press.raf = requestAnimationFrame(tick);
+  }
+
+  function confirmClear() {
+    cancelAnimationFrame(press.raf);
+    press.cleared = true;
+    el.ring.classList.remove('is-holding');
+    state.consumed = 0;
+    state.clearedUntil = Date.now() + CLEARED_MS;
+    render();
+    setTimeout(render, CLEARED_MS + 40);
+  }
+
+  function cancelHold() {
+    if (!press || press.cleared) return;
+    cancelAnimationFrame(press.raf);
+    el.ring.classList.remove('is-holding');
+    setRing(progress());
+    press = null;
+  }
+
+  function endPress() {
+    if (!press) return;
+    const held = performance.now() - press.t0;
+    cancelAnimationFrame(press.raf);
+    el.ring.classList.remove('is-holding');
+    if (press.cleared) { press = null; return; }
+    if (held < CLICK_MS) {
+      press = null;
+      drink();
+      return;
+    }
+    setRing(progress());
+    press = null;
+  }
+
+  el.ring.addEventListener('pointerdown', beginHold);
+  window.addEventListener('pointerup', endPress);
+  el.ring.addEventListener('pointermove', (e) => {
+    if (!press || press.cleared) return;
+    const r = el.ring.getBoundingClientRect();
+    const out = e.clientX < r.left - 10 || e.clientX > r.right + 10 || e.clientY < r.top - 10 || e.clientY > r.bottom + 10;
+    if (out) cancelHold();
+  });
+  el.ring.addEventListener('pointercancel', cancelHold);
+  el.ring.addEventListener('contextmenu', (e) => e.preventDefault());
+  el.ring.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); drink(); }
+  });
+
+  // 演示里的"环外点击"不应把 mouseup 变成记一杯
+  el.pauseBtn.addEventListener('click', () => {
+    state.pausedUntil = isPaused() ? 0 : Date.now() + 34 * 60000;
+    render();
+  });
+  el.activityBtn.addEventListener('click', () => {
+    state.activityDone += 1;
+    state.activitySkips = Math.max(0, state.activitySkips - 1);
+    render();
+  });
+
+  // ── 状态预设 ──
+  function applyPreset(key) {
+    const preset = PRESETS[key];
+    if (!preset) return;
+    cancelHold();
+    el.ring.classList.add('no-anim');
+    state.consumed = preset.consumed;
+    state.skips = preset.skips;
+    state.pausedUntil = preset.paused ? Date.now() + 34 * 60000 : 0;
+    state.waterOn = preset.waterOn;
+    state.activityOn = preset.activityOn;
+    state.activityDone = preset.activityDone;
+    state.scheduleOn = preset.scheduleOn;
+    state.scheduleSkips = preset.scheduleSkips;
+    state.scheduleState = preset.scheduleState;
+    state.clearedUntil = 0;
+    render();
+    void el.progress.getBoundingClientRect();
+    el.ring.classList.remove('no-anim');
+    document.querySelectorAll('[data-preset]').forEach(b =>
+      b.setAttribute('aria-pressed', String(b.dataset.preset === key)));
+  }
+
+  document.querySelectorAll('[data-preset]').forEach(b =>
+    b.addEventListener('click', () => applyPreset(b.dataset.preset)));
+
+  // ── 外观 ──
+  function syncTheme() {
+    const current = root.dataset.theme || 'light';
+    document.querySelectorAll('[data-theme-set]').forEach(b =>
+      b.setAttribute('aria-pressed', String(b.dataset.themeSet === current)));
+  }
+  document.querySelectorAll('[data-theme-set]').forEach(b =>
+    b.addEventListener('click', () => {
+      root.dataset.theme = b.dataset.themeSet;
+      syncTheme();
+    }));
+
+  syncTheme();
+  el.progress.setAttribute('stroke-dasharray', String(CIRC));
+  setRing(progress());
+  render();
+
+  // 原型直链：?preset=<key> 直接落到某个状态，用于逐张截图评审
+  const presetKey = params.get('preset');
+  if (presetKey && PRESETS[presetKey]) applyPreset(presetKey);
+})();
+</script>
+</body>
+</html>
