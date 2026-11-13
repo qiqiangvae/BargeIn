@@ -65,18 +65,6 @@ xattr -d com.apple.quarantine "/Applications/Barge In.app"
 
 ![全屏提醒](docs/screenshots/overlay.jpg)
 
-跳过之后，中断按钮进入倒计时（"喝了"不受影响）：
-
-![升级后的全屏提醒](docs/screenshots/overlay-locked.jpg)
-
-温柔档：右上角卡片。
-
-![卡片提醒](docs/screenshots/card.jpg)
-
-活动场景共用同一套呈现资源，只换文案与完成动作：
-
-![活动场景的全屏提醒](docs/screenshots/overlay-activity.jpg)
-
 ## 构建
 
 需要 macOS 14 与 Command Line Tools（不需要完整 Xcode）。
