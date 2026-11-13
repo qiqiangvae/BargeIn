@@ -4,6 +4,8 @@
 
 零权限、零账号、零遥测。数据只在本机；日程是整个产品唯一可选的联网功能，只读。
 
+官网：[barge-in.qiqiang.online](https://barge-in.qiqiang.online)
+
 ## 为什么做它
 
 > "太温柔了。我知道我要喝水，但我就是停不下来工作。"
