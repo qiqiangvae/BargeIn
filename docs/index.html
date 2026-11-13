@@ -246,11 +246,11 @@
         <h1>把提醒本身，<br>当成产品做。</h1>
         <p class="lead">常驻 macOS 菜单栏的身体节律提醒：该喝水、该起身活动、该进下一场会的时候，用一套能打断心流的提醒呈现，把你从工作里拽出来。</p>
         <div class="cta">
-          <a class="btn btn-primary" href="https://github.com/qiqiangvae/BargeIn">
-            在 GitHub 上看代码
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+          <a class="btn btn-primary" href="https://github.com/qiqiangvae/BargeIn/releases/latest">
+            下载 macOS 版
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/></svg>
           </a>
-          <a class="btn btn-ghost" href="#interface">看看它长什么样</a>
+          <a class="btn btn-ghost" href="https://github.com/qiqiangvae/BargeIn">在 GitHub 上看代码</a>
         </div>
         <ul class="facts">
           <li>零权限</li>
@@ -402,11 +402,11 @@
   <section id="start">
     <div class="wrap">
       <p class="eyebrow">开始用</p>
-      <h2>自己构建，三行命令</h2>
+      <h2>下载，或者自己构建</h2>
       <div class="start">
         <div>
-          <p>需要 macOS 14 与 Command Line Tools（不需要完整 Xcode）。目前没有签名发布版，构建产物是 ad-hoc 签名。</p>
-          <p>开发时直接 <code>make run</code>；想看一次提醒长什么样，不用等到点：<code>--demo</code>。</p>
+          <p>已发布 v0.3.0：<a href="https://github.com/qiqiangvae/BargeIn/releases/latest">下载安装</a>（约 2 MB，macOS 14+，Apple Silicon）。ad-hoc 签名、未公证，首次打开被 Gatekeeper 拦下时右键 →「打开」，或执行 <code>xattr -d com.apple.quarantine "/Applications/Barge In.app"</code>。</p>
+          <p>也可以自己构建：需要 macOS 14 与 Command Line Tools（不需要完整 Xcode）。开发时直接 <code>make run</code>；想看一次提醒长什么样，不用等到点：<code>--demo</code>。</p>
           <p class="note">代码开源于 MIT 许可，欢迎 issue 与 PR。</p>
         </div>
         <div>
