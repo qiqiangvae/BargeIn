@@ -64,7 +64,7 @@ struct ThumbnailContext {
     ]
 }
 
-/// 一套预设的全部：身份、设置页要用的元数据、呈现、缩略图、音效、强度与裂纹选项。
+/// 一套预设的全部：身份、设置页要用的元数据、呈现、缩略图、音效与强度选项。
 /// 新增预设 = 新建一个实现它的文件 + 在 `Catalog.all` 里加一行，别的代码不用动。
 ///
 /// 元数据与参数合成是场景无关的纯值，所以不挂在主线程上：场景的解码容错也要造得出出厂卡片。
@@ -78,10 +78,7 @@ protocol PresetTheme: Sendable {
     var slots: [CopySlot] { get }
     /// 这套预设能选哪些强度；空数组表示它没有强度这个属性。
     var intensities: [Intensity] { get }
-    /// 这套预设能选哪些裂纹；空数组表示它没有裂纹这个属性。
-    var patterns: [CrackPattern] { get }
     var defaultIntensity: Intensity? { get }
-    var defaultPattern: CrackPattern? { get }
     var windowLayout: WindowLayout { get }
     var hasShadow: Bool { get }
     /// 这套预设能出现在哪些场景。只有"某些场景才有意义"的预设才需要覆盖它，
@@ -91,7 +88,7 @@ protocol PresetTheme: Sendable {
     /// 这套预设的基础呈现参数。
     func presentation(for instance: PresetInstance) -> Presentation
     /// 这套预设自己的动画器；nil 表示只有静态呈现。
-    @MainActor func makeAnimator(pattern: CrackPattern, reduceMotion: Bool) -> (any OverlayAnimator)?
+    @MainActor func makeAnimator(reduceMotion: Bool) -> (any OverlayAnimator)?
 
     @MainActor @ViewBuilder func layout(_ context: ThemeContext) -> AnyView
     @MainActor @ViewBuilder func thumbnail(_ context: ThumbnailContext) -> AnyView
@@ -99,17 +96,8 @@ protocol PresetTheme: Sendable {
 
 extension PresetTheme {
     var intensities: [Intensity] { [] }
-    var patterns: [CrackPattern] { [] }
     var defaultIntensity: Intensity? { nil }
-    var defaultPattern: CrackPattern? { nil }
     var hasShadow: Bool { false }
     var scenes: Set<SceneID> { Set(SceneID.allCases) }
-    @MainActor func makeAnimator(pattern: CrackPattern, reduceMotion: Bool) -> (any OverlayAnimator)? { nil }
-}
-
-extension PresetInstance {
-    /// 老实例没有裂纹字段：缺省即这套预设自己的默认值，预览与到点一致。
-    func resolvedPattern(theme: any PresetTheme) -> CrackPattern? {
-        theme.patterns.isEmpty ? nil : (pattern ?? theme.defaultPattern)
-    }
+    @MainActor func makeAnimator(reduceMotion: Bool) -> (any OverlayAnimator)? { nil }
 }

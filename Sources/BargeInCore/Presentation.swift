@@ -8,7 +8,7 @@ public enum ReminderSound: String, Codable, Sendable {
     case shatter      // 玻璃碎：满音量一次，不重复
 }
 
-/// 一次提醒的完整体验参数，完全由预设实例解析而来：强度、裂纹、文案都是实例自己的属性。
+/// 一次提醒的完整体验参数，完全由预设实例解析而来：强度、文案都是实例自己的属性。
 /// 这里的 `preset` 只是"谁来渲染"，具体长什么样由那套预设自己决定。
 public struct Presentation: Equatable, Sendable {
     public var preset: Preset
@@ -16,22 +16,18 @@ public struct Presentation: Equatable, Sendable {
     public var allowsPostpone: Bool
     public var dismissDelay: TimeInterval
     public var interruptNeedsHold: Bool
-    /// 碎裂的花纹取值；其他预设为 nil。
-    public var pattern: CrackPattern?
 
     public init(
         preset: Preset,
         sound: ReminderSound,
         allowsPostpone: Bool,
         dismissDelay: TimeInterval,
-        interruptNeedsHold: Bool,
-        pattern: CrackPattern? = nil
+        interruptNeedsHold: Bool
     ) {
         self.preset = preset
         self.sound = sound
         self.allowsPostpone = allowsPostpone
         self.dismissDelay = dismissDelay
         self.interruptNeedsHold = interruptNeedsHold
-        self.pattern = pattern
     }
 }

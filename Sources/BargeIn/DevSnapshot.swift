@@ -118,15 +118,15 @@ enum DevSnapshot {
         renderWindow(onboarding, width: 640, height: 720, name: "onboarding-dark.png", in: dir, dark: true)
 
         let timePanel = TimePickerPanel(label: "开始", time: TimeOfDay(hour: 9, minute: 30), onChange: { _ in })
-            .frame(width: 236, height: 296)
+            .frame(width: 236, height: 252)
             .background(Color(nsColor: .windowBackgroundColor))
-        renderWindow(timePanel, width: 236, height: 296, name: "time-picker.png", in: dir)
-        renderWindow(timePanel, width: 236, height: 296, name: "time-picker-dark.png", in: dir, dark: true)
+        renderWindow(timePanel, width: 236, height: 252, name: "time-picker.png", in: dir)
+        renderWindow(timePanel, width: 236, height: 252, name: "time-picker-dark.png", in: dir, dark: true)
 
         let oddMinutePanel = TimePickerPanel(label: "开始", time: TimeOfDay(hour: 9, minute: 37), onChange: { _ in })
-            .frame(width: 236, height: 296)
+            .frame(width: 236, height: 252)
             .background(Color(nsColor: .windowBackgroundColor))
-        renderWindow(oddMinutePanel, width: 236, height: 296, name: "time-picker-odd.png", in: dir)
+        renderWindow(oddMinutePanel, width: 236, height: 252, name: "time-picker-odd.png", in: dir)
 
         store.setTrigger(
             .rhythm(.timesOfDay([TimeOfDay(hour: 9, minute: 30), TimeOfDay(hour: 20, minute: 0)])),
@@ -303,7 +303,7 @@ enum DevSnapshot {
             ),
             pendingCount: 0
         )
-        let shatterAnimator = ShatterAnimator(pattern: .fixed, reduceMotion: false)
+        let shatterAnimator = ShatterAnimator(seed: 20261113, reduceMotion: false)
         let shatterState = OverlayState(dismissDelay: 0)
         shatterState.start()
         let shatterOverlay = ReminderOverlay(
@@ -316,7 +316,7 @@ enum DevSnapshot {
         renderWindow(shatterOverlay, width: 1440, height: 900, name: "overlay-shatter.png", in: dir, dark: true, settle: 2.8)
 
         // 等用户处理时，几块小碎片还在慢慢往下掉。
-        let shedAnimator = ShatterAnimator(pattern: .fixed, reduceMotion: false)
+        let shedAnimator = ShatterAnimator(seed: 20261113, reduceMotion: false)
         let shedState = OverlayState(dismissDelay: 0)
         shedState.start()
         let shedOverlay = ReminderOverlay(
@@ -328,7 +328,7 @@ enum DevSnapshot {
         )
         renderWindow(shedOverlay, width: 1440, height: 900, name: "overlay-shatter-shed.png", in: dir, dark: true, settle: 5.4)
 
-        let cracksAnimator = ShatterAnimator(pattern: .fixed, reduceMotion: false)
+        let cracksAnimator = ShatterAnimator(seed: 20261113, reduceMotion: false)
         let cracksState = OverlayState(dismissDelay: 0)
         cracksState.start()
         let cracksOverlay = ReminderOverlay(
@@ -340,7 +340,7 @@ enum DevSnapshot {
         )
         renderWindow(cracksOverlay, width: 1440, height: 900, name: "overlay-shatter-cracks.png", in: dir, dark: true, settle: 1.35)
 
-        let fallingAnimator = ShatterAnimator(pattern: .fixed, reduceMotion: false)
+        let fallingAnimator = ShatterAnimator(seed: 20261113, reduceMotion: false)
         let fallingState = OverlayState(dismissDelay: 0)
         fallingState.start()
         let fallingOverlay = ReminderOverlay(

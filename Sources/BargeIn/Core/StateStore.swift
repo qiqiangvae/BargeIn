@@ -80,7 +80,6 @@ final class StateStore {
             preset: source.preset,
             name: uniqueName(from: source.name, in: scene),
             intensity: source.intensity,
-            pattern: source.pattern,
             copyOverrides: source.copyOverrides
         )
         updateScene(scene) { $0.instances.append(copy) }
@@ -108,16 +107,6 @@ final class StateStore {
         updateScene(scene) { config in
             guard let index = config.instances.firstIndex(where: { $0.id == id }) else { return }
             config.instances[index].name = trimmed
-        }
-    }
-
-    func setPattern(_ id: UUID, in scene: SceneID, _ pattern: CrackPattern?) {
-        guard let instance = config(scene).instances.first(where: { $0.id == id }) else { return }
-        let allowed = Catalog.theme(for: instance.preset).patterns
-        guard pattern.map({ allowed.contains($0) }) ?? allowed.isEmpty else { return }
-        updateScene(scene) { config in
-            guard let index = config.instances.firstIndex(where: { $0.id == id }) else { return }
-            config.instances[index].pattern = pattern
         }
     }
 

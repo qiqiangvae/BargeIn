@@ -28,21 +28,8 @@ public enum Intensity: String, Codable, CaseIterable, Sendable {
     }
 }
 
-/// 裂纹：哪套预设能配、有几种，由那套预设自己决定。
-public enum CrackPattern: String, Codable, CaseIterable, Sendable {
-    case fixed
-    case varied
-
-    public var title: String {
-        switch self {
-        case .fixed: "固定"
-        case .varied: "每次不同"
-        }
-    }
-}
-
 /// 预设身份。这一层只认 id，不认识任何一套预设长什么样——
-/// 元数据、呈现、音效、强度与裂纹选项都在 `Sources/BargeIn/Presentation/Themes/` 里，
+/// 元数据、呈现、音效与强度选项都在 `Sources/BargeIn/Presentation/Themes/` 里，
 /// 新增一套预设只加一个 theme 文件 + `Catalog.all` 里一行。
 public struct Preset: RawRepresentable, Codable, Hashable, Sendable {
     public let rawValue: String
@@ -71,7 +58,6 @@ public struct PresetInstance: Codable, Identifiable, Equatable, Sendable {
     public var preset: Preset
     public var name: String
     public var intensity: Intensity?
-    public var pattern: CrackPattern?
     public var copyOverrides: [String: String]
     public var builtIn: Bool
 
@@ -80,7 +66,6 @@ public struct PresetInstance: Codable, Identifiable, Equatable, Sendable {
         preset: Preset,
         name: String,
         intensity: Intensity?,
-        pattern: CrackPattern? = nil,
         copyOverrides: [String: String] = [:],
         builtIn: Bool = false
     ) {
@@ -88,7 +73,6 @@ public struct PresetInstance: Codable, Identifiable, Equatable, Sendable {
         self.preset = preset
         self.name = name
         self.intensity = intensity
-        self.pattern = pattern
         self.copyOverrides = copyOverrides
         self.builtIn = builtIn
     }
@@ -101,7 +85,6 @@ public struct PresetInstance: Codable, Identifiable, Equatable, Sendable {
         id = container.tolerant(UUID.self, forKey: .id, or: UUID())
         name = container.tolerant(String.self, forKey: .name, or: preset.rawValue)
         intensity = container.tolerantOptional(Intensity.self, forKey: .intensity)
-        pattern = container.tolerantOptional(CrackPattern.self, forKey: .pattern)
         copyOverrides = container.tolerant([String: String].self, forKey: .copyOverrides, or: [:])
         builtIn = container.tolerant(Bool.self, forKey: .builtIn, or: false)
     }

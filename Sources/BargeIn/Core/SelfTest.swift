@@ -92,9 +92,8 @@ enum SelfTest {
             state.waterConfig.instances.count == 3 && state.activityConfig.instances.count == 3
         )
         check(
-            "出厂第三张是碎裂·固定",
+            "出厂第三张是碎裂",
             state.waterConfig.instances.last?.preset == .shatter
-                && state.waterConfig.instances.last?.resolvedPattern(theme: Catalog.theme(for: .shatter)) == .fixed
                 && state.waterConfig.instances.last?.builtIn == true
         )
         check(
@@ -1105,10 +1104,9 @@ enum SelfTest {
         if let data = try? JSONEncoder().encode(old),
            var decoded = try? JSONDecoder().decode(AppState.self, from: data) {
             check(
-                "老存档补一张碎裂·固定",
+                "老存档补一张碎裂",
                 decoded.waterConfig.instances.count == 3
                     && decoded.waterConfig.instances.last?.preset == .shatter
-                    && decoded.waterConfig.instances.last?.resolvedPattern(theme: Catalog.theme(for: .shatter)) == .fixed
             )
             check("补卡不动激活项", decoded.waterConfig.activeInstanceID == oldWater.activeInstanceID)
             if let again = try? JSONEncoder().encode(decoded),
@@ -1120,9 +1118,9 @@ enum SelfTest {
             check("老存档补卡可解码", false)
         }
 
-        // 没有裂纹字段的老实例：缺省即固定；裂纹只对碎裂生效。
-        if let legacy = try? JSONDecoder().decode(PresetInstance.self, from: Data(#"{"id":"00000000-0000-0000-0000-000000000001","preset":"shatter","name":"碎裂","copyOverrides":{},"builtIn":true}"#.utf8)) {
-            check("老碎裂实例缺裂纹字段默认固定", legacy.resolvedPattern(theme: Catalog.theme(for: .shatter)) == .fixed)
+        // 老实例里可能还留着裂纹字段：现在没有这个属性，解码时直接忽略。
+        if let legacy = try? JSONDecoder().decode(PresetInstance.self, from: Data(#"{"id":"00000000-0000-0000-0000-000000000001","preset":"shatter","name":"碎裂","pattern":"fixed","copyOverrides":{},"builtIn":true}"#.utf8)) {
+            check("老碎裂实例仍可解码", legacy.preset == .shatter)
         } else {
             check("老碎裂实例可解码", false)
         }

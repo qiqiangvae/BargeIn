@@ -52,7 +52,7 @@ struct PresetGrid<Editor: View>: View {
 
     private var actionBar: some View {
         HStack(spacing: 6) {
-            ActionChip(title: "编辑文案", systemImage: "pencil") { onEdit(active) }
+            ActionChip(title: "编辑", systemImage: "pencil") { onEdit(active) }
             ActionChip(title: "预览", systemImage: "eye") { onPreview(active) }
             ActionChip(title: "复制", systemImage: "doc.on.doc") { onCopy(active) }
             Spacer(minLength: 8)
@@ -252,25 +252,6 @@ struct PresetEditor: View {
                     .foregroundStyle(.secondary)
             }
 
-            if !theme.patterns.isEmpty {
-                HStack(spacing: 12) {
-                    Text("裂纹")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                    SegmentedControl(
-                        labels: theme.patterns.map(\.title),
-                        selected: patternIndex
-                    ) { index in
-                        store.setPattern(instance.id, in: scene, theme.patterns[index])
-                    }
-                    .frame(width: 180)
-                    Spacer(minLength: 0)
-                }
-                Text("每次提醒换一套碎片花纹；固定时预览与到点完全一致。")
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.secondary)
-            }
-
             ForEach(theme.slots, id: \.self) { slot in
                 field(slot)
             }
@@ -287,10 +268,6 @@ struct PresetEditor: View {
 
     private var intensityIndex: Int {
         theme.intensities.firstIndex(of: instance.intensity ?? .standard) ?? 0
-    }
-
-    private var patternIndex: Int {
-        theme.patterns.firstIndex(of: instance.resolvedPattern(theme: theme) ?? .fixed) ?? 0
     }
 
     private func field(_ slot: CopySlot) -> some View {

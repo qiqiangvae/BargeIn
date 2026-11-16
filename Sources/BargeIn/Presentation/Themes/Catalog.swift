@@ -23,7 +23,7 @@ enum Catalog {
         all.filter { $0.scenes.contains(scene) }
     }
 
-    /// 某个实例的呈现参数：预设自己的基础参数，强度与裂纹由实例带进来。
+    /// 某个实例的呈现参数：预设自己的基础参数，强度由实例带进来。
     static func presentation(for instance: PresetInstance) -> Presentation {
         theme(for: instance.preset).presentation(for: instance)
     }
@@ -35,7 +35,6 @@ enum Catalog {
                 preset: $0.preset,
                 name: $0.title,
                 intensity: $0.defaultIntensity,
-                pattern: $0.defaultPattern,
                 builtIn: true
             )
         }

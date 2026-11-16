@@ -52,12 +52,6 @@ struct Fracture {
     static let revealAt: TimeInterval = 2.25
     static let holdAt: TimeInterval = 2.45
 
-    /// 固定种子：预览与到点完全一致；每次不同则换一套。
-    static func generate(pattern: CrackPattern) -> Fracture {
-        let seed: UInt64 = pattern == .fixed ? 20261113 : UInt64.random(in: 1...UInt64.max)
-        return generate(seed: seed)
-    }
-
     static func generate(seed: UInt64) -> Fracture {
         var rng = Mulberry32(seed: UInt32(truncatingIfNeeded: seed))
         let width = reference.width
@@ -468,8 +462,8 @@ final class ShatterAnimator {
     private(set) var shedSettled = false
     @ObservationIgnored private var revealTask: Task<Void, Never>?
 
-    init(pattern: CrackPattern, reduceMotion: Bool) {
-        self.fracture = Fracture.generate(pattern: pattern)
+    init(seed: UInt64 = .random(in: 1...UInt64.max), reduceMotion: Bool) {
+        self.fracture = Fracture.generate(seed: seed)
         self.reduceMotion = reduceMotion
         if reduceMotion {
             phase = .revealed

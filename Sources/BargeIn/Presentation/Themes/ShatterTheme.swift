@@ -8,8 +8,6 @@ struct ShatterTheme: PresetTheme {
     let summary = "屏幕炸开 + 玻璃碎音"
     let symbol = "burst.fill"
     let slots: [CopySlot] = [.title, .progress]
-    let patterns: [CrackPattern] = [.fixed, .varied]
-    let defaultPattern: CrackPattern? = .fixed
 
     var windowLayout: WindowLayout { .fullscreen }
 
@@ -21,13 +19,12 @@ struct ShatterTheme: PresetTheme {
             sound: .shatter,
             allowsPostpone: true,
             dismissDelay: 0,
-            interruptNeedsHold: false,
-            pattern: instance.resolvedPattern(theme: self)
+            interruptNeedsHold: false
         )
     }
 
-    @MainActor func makeAnimator(pattern: CrackPattern, reduceMotion: Bool) -> (any OverlayAnimator)? {
-        ShatterAnimator(pattern: pattern, reduceMotion: reduceMotion)
+    @MainActor func makeAnimator(reduceMotion: Bool) -> (any OverlayAnimator)? {
+        ShatterAnimator(reduceMotion: reduceMotion)
     }
 
     @MainActor @ViewBuilder

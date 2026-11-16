@@ -156,9 +156,6 @@
 <div class="demo-bar">
   <span class="label">原型 · 碎裂覆盖层</span>
   <span class="spacer"></span>
-  <span class="label">裂纹</span>
-  <button class="chip" id="patternFixed" aria-pressed="true">固定</button>
-  <button class="chip" id="patternRandom" aria-pressed="false">每次不同</button>
   <button class="chip" id="reduce" aria-pressed="false">减弱动态效果</button>
   <button class="replay" id="replay">重播</button>
   <span class="label">主题</span>
@@ -226,7 +223,7 @@
   <p><b>退出（你点了才算）</b>：喝了 / 推迟 / 中断任意一个动作后，面板先淡出，整片玻璃由近及远坠落（重力加速 + 自旋 + 横向漂移，约 2 秒），遮罩随碎片一起消失、露出桌面；落完窗口才关闭。</p>
   <p><b>破碎怎么发生</b>：炸点随机落在屏面偏上、不居中 → 先裂出 4–7 条带折线的主裂 → 每块楔形碎块再各自被随机裂口继续劈开（越靠近炸点裂得越碎），裂缝只终止在已有裂缝上，于是出现大量 T 形岔口与长短不一的局部弧。</p>
   <p><b>音效</b>：系统 <code>Glass</code> 一声，满音量，只在炸点响一次（实现上随炸点延后约 0.36s 播放）；跳过次数把等级推到 2 以上时，账本照旧把它换成重复的 <code>alarm</code>。原型不发声。</p>
-  <p><b>裂纹</b>：<b>固定</b> = 全局唯一一套（炸点、裂纹、碎片都固定），预览与到点完全一致；<b>每次不同</b> = 一次触发一套，多屏按尺寸等比缩放共用。<b>减弱动态效果</b>下不裂、不落、不闪，直接呈现静态裂痕，动作后立即关闭、不播坠落。</p>
+  <p><b>花纹</b>：每次提醒重新生成一套（炸点、裂纹、碎片都随机），多屏按尺寸等比缩放共用；预览与到点也各自一套。<b>减弱动态效果</b>下不裂、不落、不闪，直接呈现静态裂痕，动作后立即关闭、不播坠落。</p>
   <p><b>边界</b>：档位取「大字墙 · 标准」——允许推迟、中断延迟 0s、等级上限 2；文案槽是标题 + 进度；画面不随账本升级加码。面板 2.25s 出现，交互解锁取「防误触 1s」与「面板出现 2.25s」的较大者；面板出现前 Esc / Enter 不响应。队列里的下一条等坠落播完再出现（约 2s）。评审可用 <code>?t=&lt;毫秒&gt;</code> 冻结进入动画、<code>?e=&lt;毫秒&gt;</code> 冻结确认后的坠落。</p>
 </div>
 
@@ -244,7 +241,6 @@
   const sparkEl = stage.querySelector('.spark');
 
   let seed = FIXED_SEED;
-  let randomMode = false;
   let reduced = false;
   let pattern = null;
   let polys = [];
@@ -658,7 +654,7 @@
     stop();
     phase = 'entrance';
     stage.classList.remove('is-impact', 'is-hold', 'is-exiting', 'is-gone', 'is-freeze', 'freeze-flash', 'reduce');
-    if (randomMode) seed = (Date.now() % 2147483647) | 0;
+    seed = (Date.now() % 2147483647) | 0;
     render();
     positionBurst(pattern);
 
@@ -705,17 +701,7 @@
     }
   }
 
-  function setMode(random){
-    randomMode = random;
-    document.getElementById('patternFixed').setAttribute('aria-pressed', String(!random));
-    document.getElementById('patternRandom').setAttribute('aria-pressed', String(random));
-    if (!random) seed = FIXED_SEED;
-    show();
-  }
-
   document.getElementById('replay').addEventListener('click', show);
-  document.getElementById('patternFixed').addEventListener('click', () => setMode(false));
-  document.getElementById('patternRandom').addEventListener('click', () => setMode(true));
   document.getElementById('reduce').addEventListener('click', () => setReduce(!reduced));
   document.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', exit));
 

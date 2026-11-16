@@ -51,7 +51,6 @@ final class ReminderPresenter {
         // 碎裂：裂开后就停住，等用户处理；退场时整片坠落。
         let theme = Catalog.theme(for: presentation.preset)
         animator = theme.makeAnimator(
-            pattern: presentation.pattern ?? theme.defaultPattern ?? .fixed,
             reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         )
 

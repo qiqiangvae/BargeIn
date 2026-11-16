@@ -276,6 +276,35 @@
   .add-time svg{width:11px;height:11px}
   .add-time:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
+  /* 时间选择弹层：时是网格，分是滑条 */
+  .time-pop{position:fixed;z-index:60;width:236px;padding:14px;border-radius:12px;
+    background:color-mix(in srgb,var(--window) 94%,#fff);border:1px solid var(--stroke);
+    box-shadow:0 12px 30px rgba(0,0,0,.18),0 1px 3px rgba(0,0,0,.08);
+    display:flex;flex-direction:column;gap:12px}
+  html[data-theme="dark"] .time-pop{background:color-mix(in srgb,var(--window) 92%,#fff 8%)}
+  .time-pop .tp-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .time-pop .tp-label{font-size:11.5px;font-weight:600;color:var(--ink2)}
+  .time-pop .tp-value{font-size:15px;font-weight:600}
+  .time-pop .tp-unit{display:block;font-size:10.5px;font-weight:500;color:var(--ink2);margin-bottom:6px}
+  .hour-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+  .hour-grid button{appearance:none;border:1px solid transparent;background:none;border-radius:6px;
+    height:26px;font:inherit;font-size:12px;color:var(--ink);cursor:pointer;
+    font-variant-numeric:tabular-nums}
+  .hour-grid button:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+  .hour-grid button[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 16%,transparent);
+    border-color:color-mix(in srgb,var(--accent) 45%,transparent);font-weight:600}
+  .hour-grid button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .minute-slider{appearance:none;width:100%;height:18px;margin:0;background:transparent;cursor:pointer;display:block}
+  .minute-slider::-webkit-slider-runnable-track{height:4px;border-radius:2px;
+    background:linear-gradient(to right,var(--accent) 0 var(--pct),var(--fill) var(--pct) 100%)}
+  .minute-slider::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:50%;
+    background:#fff;border:1px solid rgba(0,0,0,.14);margin-top:-5px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  html[data-theme="dark"] .minute-slider::-webkit-slider-thumb{background:#2c2c2e;border-color:rgba(255,255,255,.35)}
+  .minute-slider::-moz-range-track{height:4px;border-radius:2px;background:var(--fill)}
+  .minute-slider::-moz-range-progress{height:4px;border-radius:2px;background:var(--accent)}
+  .minute-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.14)}
+  .minute-slider:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:4px}
+
   /* 订阅 */
   .subs{display:flex;flex-direction:column;gap:8px}
   .sub{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;
@@ -346,9 +375,10 @@
 <div class="demo-bar">
   <span class="label">原型 · 状态</span>
   <button class="chip" data-view="default" aria-pressed="true">默认</button>
-  <button class="chip" data-view="edit" aria-pressed="false">编辑文案</button>
+  <button class="chip" data-view="edit" aria-pressed="false">编辑</button>
   <button class="chip" data-view="many" aria-pressed="false">多张卡</button>
   <button class="chip" data-view="times" aria-pressed="false">指定时刻</button>
+  <button class="chip" data-view="timepick" aria-pressed="false">时间选择</button>
   <button class="chip" data-view="schedule" aria-pressed="false">日程</button>
   <button class="chip" data-view="addsub" aria-pressed="false">添加订阅</button>
   <button class="chip" data-view="list" aria-pressed="false">今日列表</button>
@@ -393,7 +423,7 @@
           <div class="preset-actions" data-actions>
             <button class="act" data-act="edit">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/></svg>
-              编辑文案
+              编辑
             </button>
             <button class="act" data-act="preview">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>
@@ -427,14 +457,6 @@
               </div>
             </div>
             <p class="hint" data-slot="strength">强硬不可推迟，中断按钮锁定 5 秒起；标准可以推迟 5 分钟。</p>
-            <div class="field-row" data-slot="crack">
-              <span class="field-label">裂纹</span>
-              <div class="seg" role="radiogroup" aria-label="裂纹">
-                <button role="radio" aria-checked="true">固定</button>
-                <button role="radio" aria-checked="false">每次不同</button>
-              </div>
-            </div>
-            <p class="hint" data-slot="crack">每次提醒换一套碎片花纹；固定时预览与到点完全一致。</p>
             <label class="field" data-slot="word">
               <span class="field-label">大字词</span>
               <input type="text" value="该喝水了">
@@ -806,11 +828,27 @@
   </footer>
 </div>
 
+<div class="time-pop" id="timePop" hidden>
+  <div class="tp-head">
+    <span class="tp-label">开始</span>
+    <span class="tp-value num" id="tpValue">09:30</span>
+  </div>
+  <div>
+    <span class="tp-unit">时</span>
+    <div class="hour-grid" id="hourGrid"></div>
+  </div>
+  <div>
+    <span class="tp-unit">分</span>
+    <input class="minute-slider" id="minuteSlider" type="range" min="0" max="59" step="1" value="30" aria-label="分钟">
+  </div>
+</div>
+
 <p class="proto-note">
   这一版动了六处结构：① 第四个 tab 从「设置」改名「通用」，场景与 App 级设置不再同名；② 每个场景页顶部只留一句说明 + 启用开关，场景名只在 tab 上出现一次；
   ③ 预设卡换成真实呈现的微缩图（大字墙的重复大字、温柔的右上卡片、碎裂的裂纹），替掉「图标 + 一句话」；④ 编辑 / 预览 / 复制 / 删除收到选中卡下方的一行动作，删掉每张卡上三个图标按钮；
   ⑤ 取消「全部预设」二级页，所有卡就在首页网格里往下排，复制出来的卡当场看得见；⑥ 窗口宽高都固定：切 tab 只换内容、不换窗口高度（高度随内容重算时，切一次 tab 窗口要缩两下、界面跟着抖），内容超出就在窗内滚动，比默认页矮的 tab 底部留白。
   细节：删除入口一律先安静再危险（第一下变「确认删除」），指定时刻收成一个列表（时间在左、删除在右、行间有分隔线），不再每行一个红底垃圾桶、左右两截；输入框只有一种皮肤；字号收成 11 / 12 / 13 三档。预设卡下不再有「跳过 N 次」的升级说明：强度是预设自带的，界面不展示跳过次数。
+  这一版另改三处：动作按钮从「编辑文案」改成「编辑」（它改名称、强度与文案，不只文案）；碎裂不再暴露裂纹参数，花纹每次提醒重新生成；时间弹层里的分钟从 12 个格子改成一条滑条，时仍是网格。
 </p>
 
 <script>
@@ -870,7 +908,7 @@
   ];
 
   // 选中的卡按场景分开记：一个场景的选用不该跟着另一个场景走
-  const state = { scene: 'water', many: false, editing: false, times: false,
+  const state = { scene: 'water', many: false, editing: false, times: false, timePop: false,
     selected: { water: 0, activity: 0, schedule: 0, alarm: 0 } };
   const selIndex = () => state.selected[state.scene] ?? 0;
 
@@ -878,6 +916,60 @@
   const page = () => $('#page' + state.scene[0].toUpperCase() + state.scene.slice(1));
   const scene = () => SCENES[state.scene];
   const cards = () => state.many ? BASE.concat(COPIES) : BASE;
+
+  // 时间弹层：时选网格、分拖滑条；原型里拖动会同步写回第一行时刻。
+  const pickState = { hour: 9, minute: 30 };
+  const hourGrid = $('#hourGrid');
+  const minuteSlider = $('#minuteSlider');
+  let timeAnchor = null;
+
+  hourGrid.innerHTML = Array.from({ length: 24 }, (_, h) =>
+    `<button type="button" data-hour="${h}" aria-pressed="false">${String(h).padStart(2, '0')}</button>`
+  ).join('');
+
+  hourGrid.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-hour]');
+    if (!b) return;
+    pickState.hour = Number(b.dataset.hour);
+    syncTimePop();
+  });
+
+  minuteSlider.addEventListener('input', () => {
+    pickState.minute = Number(minuteSlider.value);
+    syncTimePop();
+  });
+
+  function syncTimePop() {
+    const h = String(pickState.hour).padStart(2, '0');
+    const m = String(pickState.minute).padStart(2, '0');
+    $('#tpValue').textContent = `${h}:${m}`;
+    hourGrid.querySelectorAll('[data-hour]').forEach(b =>
+      b.setAttribute('aria-pressed', String(Number(b.dataset.hour) === pickState.hour)));
+    minuteSlider.value = String(pickState.minute);
+    minuteSlider.style.setProperty('--pct', `${(pickState.minute / 59) * 100}%`);
+    if (timeAnchor) {
+      timeAnchor.firstChild.nodeValue = `${h}:${m}`;
+      timeAnchor.setAttribute('aria-label', `第 1 次 ${h}:${m}`);
+    }
+  }
+
+  function renderTimePop() {
+    const pop = $('#timePop');
+    timeAnchor = page().querySelector('[data-rhythm-times] .time-row .ghost');
+    if (!state.timePop || !timeAnchor) { pop.hidden = true; return; }
+    pop.hidden = false;
+    syncTimePop();
+    // 等这一帧的布局（含字体）定下来再摆位：下方放不下就翻到锚点上方。
+    requestAnimationFrame(() => {
+      const r = timeAnchor.getBoundingClientRect();
+      const win = document.querySelector('.window').getBoundingClientRect();
+      const below = r.bottom + 6;
+      const above = r.top - pop.offsetHeight - 8;
+      const fitsBelow = below + pop.offsetHeight <= win.bottom - 12;
+      pop.style.left = `${Math.min(r.left, win.right - pop.offsetWidth - 12)}px`;
+      pop.style.top = `${Math.max(win.top + 8, fitsBelow ? below : above)}px`;
+    });
+  }
 
   function mockHTML(kind) {
     const s = scene();
@@ -945,7 +1037,7 @@
     const slots = {
       wall: ['strength', 'word', 'progress'],
       gentle: ['title', 'progress'],
-      shatter: ['crack', 'title', 'progress']
+      shatter: ['title', 'progress']
     }[card.preset];
 
     editor.querySelectorAll('[data-slot]').forEach(el => {
@@ -1008,12 +1100,14 @@
 
     renderSceneBits();
     if (state.scene !== 'app') renderPresets();
+    renderTimePop();
   }
   // ── tab ──
   document.querySelectorAll('[data-tab]').forEach(b =>
     b.addEventListener('click', () => {
       state.scene = b.dataset.tab;
       state.editing = false;
+      state.timePop = false;
       render();
     }));
 
@@ -1097,6 +1191,8 @@
     edit: () => { state.scene = 'water'; state.many = false; state.editing = true; },
     many: () => { state.scene = 'water'; state.many = true; state.editing = false; },
     times: () => { state.scene = 'water'; state.many = false; state.times = true; },
+    timepick: () => { state.scene = 'water'; state.many = false; state.editing = false;
+      state.times = true; state.timePop = true; },
     schedule: () => { state.scene = 'schedule'; },
     alarm: () => { state.scene = 'alarm'; },
     addsub: () => { state.scene = 'schedule'; setAddForm(true); },
@@ -1111,6 +1207,7 @@
   };
 
   function applyView(key) {
+    state.timePop = key === 'timepick';
     (VIEWS[key] || VIEWS.default)();
     document.querySelectorAll('[data-view]').forEach(b =>
       b.setAttribute('aria-pressed', String(b.dataset.view === key)));

@@ -1,7 +1,7 @@
 import SwiftUI
 import BargeInCore
 
-/// 24 小时制时间值：收起时是一枚 `HH:mm` 胶囊，点开是「时 / 分」网格。
+/// 24 小时制时间值：收起时是一枚 `HH:mm` 胶囊，点开是「时网格 + 分滑条」。
 /// 替掉系统 `DatePicker` 的步进字段，让时间输入与设置页其它控件同一套皮肤。
 struct TimePicker: View {
     let label: String
@@ -62,20 +62,11 @@ struct TimePicker: View {
     }
 }
 
-/// 展开内容：时 24 项、分 12 项（当前值不是 5 的倍数时保留它），6 列网格单击即生效。
+/// 展开内容：时是 24 项 6 列网格，分是一条 0–59 的滑条，单击 / 拖动即生效。
 struct TimePickerPanel: View {
     let label: String
     let time: TimeOfDay
     let onChange: (TimeOfDay) -> Void
-
-    private var minutes: [Int] {
-        var values = Array(stride(from: 0, to: 60, by: 5))
-        if !values.contains(time.minute) {
-            values.append(time.minute)
-            values.sort()
-        }
-        return values
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -93,8 +84,13 @@ struct TimePickerPanel: View {
                 onChange(TimeOfDay(hour: hour, minute: time.minute))
             }
 
-            grid(unit: "分", values: minutes, selected: time.minute) { minute in
-                onChange(TimeOfDay(hour: time.hour, minute: minute))
+            VStack(alignment: .leading, spacing: 6) {
+                Text("分")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(.secondary)
+                MinuteSlider(minute: time.minute) { minute in
+                    onChange(TimeOfDay(hour: time.hour, minute: minute))
+                }
             }
         }
         .padding(14)
@@ -118,6 +114,75 @@ struct TimePickerPanel: View {
                 }
             }
         }
+    }
+}
+
+/// 分钟滑条：一条 4pt 轨道 + 14pt 圆点，滑到哪分就改到哪分。
+/// 系统 Slider 在 macOS 上不画已走过的轨道，和设置页的"进度条"观感对不上，所以自绘。
+private struct MinuteSlider: View {
+    let minute: Int
+    let onChange: (Int) -> Void
+
+    private let thumb: CGFloat = 14
+    private let track: CGFloat = 4
+
+    var body: some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let usable = max(1, width - thumb)
+            let progress = CGFloat(min(minute, 59)) / 59
+            let thumbX = thumb / 2 + usable * progress
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.primary.opacity(0.10))
+                    .frame(height: track)
+                Capsule()
+                    .fill(Theme.accent)
+                    .frame(width: thumbX, height: track)
+                Circle()
+                    .fill(Color(nsColor: .windowBackgroundColor))
+                    .overlay(
+                        Circle().strokeBorder(Theme.stroke, lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
+                    .frame(width: thumb, height: thumb)
+                    .offset(x: thumbX - thumb / 2)
+            }
+            .frame(width: width, height: thumb)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        let ratio = (value.location.x - thumb / 2) / usable
+                        set(min(59, max(0, Int((ratio * 59).rounded()))))
+                    }
+            )
+        }
+        .frame(height: thumb)
+        .focusable()
+        .onKeyPress(.leftArrow) { adjust(-1) }
+        .onKeyPress(.rightArrow) { adjust(1) }
+        .accessibilityElement()
+        .accessibilityLabel("分钟")
+        .accessibilityValue("\(minute) 分")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: _ = adjust(1)
+            case .decrement: _ = adjust(-1)
+            default: break
+            }
+        }
+    }
+
+    private func set(_ next: Int) {
+        guard next != minute else { return }
+        onChange(next)
+    }
+
+    private func adjust(_ delta: Int) -> KeyPress.Result {
+        set(min(59, max(0, minute + delta)))
+        return .handled
     }
 }
 
