@@ -1,6 +1,6 @@
 # Barge In 产品文档
 
-- 状态：四场景（App v0.4.2，2026-11-16）
+- 状态：四场景（App v0.4.3，2026-11-16）
 - 更新日期：2026-11-14
 - 相关文档：[技术方案](design.md) · [竞品与市场调研](competitor-scan.md) · [路线图](roadmap.md) · [术语表](../GLOSSARY.md) · [ADR-0001](adr/0001-network-for-calendar-subscriptions.md) · [ADR-0002](adr/0002-alarms-vs-calendar.md) · [ADR-0003](adr/0003-no-automatic-escalation.md) · [ADR-0004](adr/0004-release-model-private-core.md)
 
@@ -167,7 +167,7 @@
 | 账本照旧 | 跳过与完成都只记录，不改变呈现；账本按场景各一份 |
 | 出厂停用 | 没有闹钟就没有数据；加第一条之后提示开启场景 |
 
-### v0.4.2（更新检查，本版）
+### v0.4.3（更新检查，本版）
 
 | 功能 | 说明 |
 |---|---|
