@@ -161,6 +161,7 @@ private struct MinuteSlider: View {
         }
         .frame(height: thumb)
         .focusable()
+        .focusEffectDisabled()
         .onKeyPress(.leftArrow) { adjust(-1) }
         .onKeyPress(.rightArrow) { adjust(1) }
         .accessibilityElement()
