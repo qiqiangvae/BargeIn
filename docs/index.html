@@ -367,7 +367,7 @@
             <a href="https://github.com/qiqiangvae/BargeIn/blob/main/docs/design.md">技术方案</a>
             <a href="https://github.com/qiqiangvae/BargeIn/blob/main/docs/adr/0001-network-for-calendar-subscriptions.md">ADR-0001</a>
           </div>
-          <p class="note">日程是整个产品唯一会离开这台机器的功能：只向你填的地址做只读请求，不上传任何内容，没有账号体系，没有遥测；关掉场景或删掉订阅，就再也没有请求。</p>
+          <p class="note">日程订阅只向你填的地址做只读请求；另一处联网是更新检查（只向 GitHub 要一次版本号与发布说明，可在「通用」关掉）。两处都不上传任何内容，没有账号体系，没有遥测。</p>
         </div>
       </div>
     </div>
@@ -388,7 +388,7 @@
         </div>
         <div>
           <h3>联网是例外，不是常态</h3>
-          <p>日程是唯一会离开这台机器的功能，且只读。关掉日程场景或删掉订阅，就再也没有任何请求。</p>
+          <p>只有两件事会离开这台机器，且都只读：日程订阅与更新检查。关掉日程场景、删掉订阅，再关掉「自动检查更新」，就再也没有任何请求。</p>
         </div>
         <div>
           <h3>开源 + 内容收费</h3>
@@ -405,6 +405,7 @@
       <div class="start">
         <div>
           <p>最新版在 <a href="https://github.com/qiqiangvae/BargeIn/releases/latest">Releases</a>（约 2 MB，macOS 14+，Apple Silicon）。ad-hoc 签名、未公证，首次打开被 Gatekeeper 拦下时右键 →「打开」，或执行 <code>xattr -d com.apple.quarantine "/Applications/Barge In.app"</code>。</p>
+          <p>装好之后不用再回来：App 启动时会检查更新，有新版就用「温柔」卡告诉你——点卡片进通用设置，一键下载安装。不想让它联网，在「通用」里关掉「自动检查更新」即可。</p>
           <p>也可以自己构建：需要 macOS 14 与 Command Line Tools（不需要完整 Xcode）。开发时直接 <code>make run</code>；想看一次提醒长什么样，不用等到点：<code>--demo</code>。</p>
           <p class="note">代码开源于 MIT 许可，欢迎 issue 与 PR。</p>
         </div>

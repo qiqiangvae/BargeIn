@@ -10,6 +10,8 @@ final class StatusItemController: NSObject {
     private let presence: Presence
     private let feeds: FeedService
     private let presenter = ReminderPresenter()
+    private let updateNotice = UpdateNoticePresenter()
+    private let updates: UpdateChecker
     private let settings = SettingsWindowController()
     private let statusItem: NSStatusItem
     private let popover = NSPopover()
@@ -23,6 +25,7 @@ final class StatusItemController: NSObject {
         self.presence = presence
         self.engine = ReminderEngine(store: store, presence: presence)
         self.feeds = FeedService(store: store)
+        self.updates = UpdateChecker(store: store)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
 
@@ -50,6 +53,9 @@ final class StatusItemController: NSObject {
         // 订阅拉回来新事件后立刻重算，不让一条五分钟后的会等到下一轮刷新。
         feeds.onEventsChanged = { [weak self] in self?.engine.feedsChanged() }
         feeds.start()
+        // 自动检查更新：只问 GitHub 有没有新版本；通知走温柔卡，不开系统通知权限。
+        updates.onFoundNewVersion = { [weak self] release in self?.offerUpdate(release) }
+        updates.start()
 
         if !store.state.hasOnboarded {
             // 首屏只出现一次：开窗就记下。用户直接关窗、⌘Q、强退、不点「就用这个」，
@@ -60,6 +66,12 @@ final class StatusItemController: NSObject {
 
         if CommandLine.arguments.contains("--demo") {
             present(.sceneOnly(.water))
+        }
+        if CommandLine.arguments.contains("--demo-update") {
+            // 开发期看更新卡长什么样：不检查、不发通告，点卡片照常落设置·通用。
+            updateNotice.show(version: "0.5.0", current: updates.currentVersion ?? "0.4.2") { [weak self] in
+                self?.showSettings(page: .app)
+            }
         }
     }
 
@@ -140,12 +152,14 @@ final class StatusItemController: NSObject {
         )
     }
 
-    private func showSettings(onboarding: Bool = false) {
+    private func showSettings(onboarding: Bool = false, page: SettingsModel.Page? = nil) {
         settings.show(
             store: store,
             engine: engine,
             feeds: feeds,
+            updates: updates,
             onboarding: onboarding,
+            page: page,
             onPreview: { [weak self] scene, instance in
                 self?.previewReminder(scene: scene, instance: instance)
             },
@@ -156,6 +170,23 @@ final class StatusItemController: NSObject {
                 self.previewReminder(scene: .water, instance: self.store.activeInstance(for: .water))
             }
         )
+    }
+
+    /// 自动检查发现新版本：每个版本只提醒一次；正在弹提醒或设置窗口开着时不叠一张卡。
+    private func offerUpdate(_ release: UpdateChecker.Release) {
+        guard store.state.checkForUpdates,
+              updates.isSupported,
+              store.state.lastNotifiedVersion != release.version,
+              !presenter.isShowing,
+              !settings.isVisible
+        else { return }
+        store.set(\.lastNotifiedVersion, release.version)
+        updateNotice.show(
+            version: release.version,
+            current: updates.currentVersion ?? ""
+        ) { [weak self] in
+            self?.showSettings(page: .app)
+        }
     }
 
     /// 设置里的预览：按这张卡自己的配置呈现，动作只关闭，不写进度、不记账、不动调度。

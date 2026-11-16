@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import BargeInCore
 import SceneSchedule
@@ -118,6 +119,11 @@ final class SettingsModel {
 
     /// 离开场景 tab 同样收起编辑面板。
     private func leaveScene(_ page: Page) {
+        selectPage(page)
+    }
+
+    /// 从提醒卡跳进来时直接落到指定页（目前只有通用）。
+    func selectPage(_ page: Page) {
         self.page = page
         editingID = nil
         editingAlarmID = nil
@@ -157,6 +163,7 @@ struct SettingsView: View {
     let store: StateStore
     let engine: ReminderEngine
     let feeds: FeedService
+    let updates: UpdateChecker
     let model: SettingsModel
     let onPreview: (SceneID, PresetInstance) -> Void
     let onFinishOnboarding: () -> Void
@@ -247,6 +254,7 @@ struct SettingsView: View {
                 case .app:
                     timeCard
                     generalCard
+                    versionCard
                     privacyLine
                 }
             }
@@ -271,7 +279,7 @@ struct SettingsView: View {
     }
 
     private var privacyLine: some View {
-        Text("零权限 · 数据只保存在本机；日程订阅是唯一联网功能，只读")
+        Text("零权限 · 数据只保存在本机；日程订阅与更新检查是仅有的联网功能，都只读，更新检查可关闭")
             .font(.system(size: 10.5))
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity)
@@ -585,7 +593,157 @@ struct SettingsView: View {
                 .toggleStyle(.switch)
                 .controlSize(.small)
             }
+            SettingsRow(title: "自动检查更新", hint: autoCheckHint) {
+                Toggle("自动检查更新", isOn: Binding(
+                    get: { store.state.checkForUpdates },
+                    set: { enabled in
+                        store.set(\.checkForUpdates, enabled)
+                        updates.setAutoCheck(enabled)
+                    }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .disabled(!updates.isSupported)
+            }
         }
+    }
+
+    private var autoCheckHint: String {
+        updates.isSupported
+            ? "启动时与每 24 小时查一次 GitHub；只读，不发送任何数据"
+            : "开发构建没有版本号，不检查更新；打包后的 App 才有"
+    }
+
+    // MARK: - 版本与更新
+
+    private var versionCard: some View {
+        SettingsCard(title: "版本", footnote: updates.currentVersion.map { "当前 \($0)" }) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(versionHeadline)
+                            .font(.system(size: 13))
+                        Text(versionDetail)
+                            .font(.system(size: 11))
+                            .foregroundStyle(versionDetailTint)
+                            .lineLimit(2)
+                    }
+                    Spacer(minLength: 8)
+                    versionControls
+                }
+
+                if let progress = downloadProgress {
+                    ProgressView(value: progress.done, total: progress.total)
+                        .progressViewStyle(.linear)
+                        .tint(Theme.accent)
+                    Text(progress.text)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("更新包从 GitHub Releases 下载；装完 App 自动重启。")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var versionHeadline: String {
+        switch updates.status {
+        case .idle:
+            return updates.isSupported ? "还没检查过" : "开发构建"
+        case .checking:
+            return "正在检查…"
+        case .upToDate:
+            return "已是最新"
+        case let .available(release):
+            return "新版本 \(release.version) 可用"
+        case let .downloading(version, _, _):
+            return "正在下载 \(version)…"
+        case let .installing(version):
+            return "正在安装 \(version)…"
+        case .failed:
+            return "检查失败"
+        }
+    }
+
+    private var versionDetail: String {
+        switch updates.status {
+        case .idle:
+            return updates.isSupported ? "启动时会自动检查；也可以现在查一次" : "没有版本号，不检查更新"
+        case .checking:
+            return "只向 GitHub 询问一次最新版本号"
+        case .upToDate:
+            return "没有可用的新版本"
+        case let .available(release):
+            return release.summary ?? "点更新下载并安装"
+        case .downloading:
+            return "下载完成后自动安装并重启"
+        case .installing:
+            return "App 会退出，然后重新打开"
+        case let .failed(message):
+            return message
+        }
+    }
+
+    private var versionDetailTint: Color {
+        if case .failed = updates.status { return Theme.danger }
+        return .secondary
+    }
+
+    private var downloadProgress: (done: Double, total: Double, text: String)? {
+        guard case let .downloading(_, received, total) = updates.status else { return nil }
+        let receivedText = ByteCountFormatter.string(fromByteCount: received, countStyle: .file)
+        guard total > 0 else {
+            return (0, 1, "下载中 · 已收 \(receivedText)")
+        }
+        let percent = min(100, Int(Double(received) / Double(total) * 100))
+        let totalText = ByteCountFormatter.string(fromByteCount: total, countStyle: .file)
+        return (Double(received), Double(total), "下载中 \(percent)% · \(receivedText) / \(totalText)")
+    }
+
+    @ViewBuilder
+    private var versionControls: some View {
+        switch updates.status {
+        case .idle:
+            if updates.isSupported {
+                versionButton("检查") { updates.check() }
+            }
+        case .checking:
+            versionButton("检查中", enabled: false) {}
+        case .upToDate:
+            versionButton("再检查一次") { updates.check() }
+        case let .available(release):
+            HStack(spacing: 8) {
+                versionButton("发布说明") {
+                    NSWorkspace.shared.open(release.pageURL)
+                }
+                versionButton("更新", emphasized: true) {
+                    updates.downloadAndInstall(release)
+                }
+            }
+        case .downloading, .installing:
+            EmptyView()
+        case .failed:
+            HStack(spacing: 8) {
+                versionButton("手动下载") {
+                    NSWorkspace.shared.open(UpdateChecker.releasesPage)
+                }
+                versionButton("重试", emphasized: true) { updates.check() }
+            }
+        }
+    }
+
+    /// 版本卡的动作只有一两个，宽度固定住，别让按钮在整行里被拉成一条。
+    private func versionButton(
+        _ title: String,
+        emphasized: Bool = false,
+        enabled: Bool = true,
+        action: @escaping () -> Void
+    ) -> some View {
+        QuietButton(title: title, height: 28, emphasized: emphasized, enabled: enabled, action: action)
+            .frame(width: 88)
     }
 
     // MARK: - 底部状态

@@ -2,7 +2,7 @@
 
 常驻 macOS 菜单栏的反内耗提醒：你在心流里停不下来的时候，把你从手头这件事里拽出来，免得漏掉别的正事——该喝水、该起身活动、该进下一场会、该去点外卖。这里的「内耗」只有一个意思：手头这件事把你别的正事挤掉，不是精神内耗。
 
-零权限、零账号、零遥测。数据只在本机；日程是整个产品唯一可选的联网功能，只读。
+零权限、零账号、零遥测。数据只在本机；日程订阅与更新检查是仅有的联网功能，都只读，更新检查可关闭。
 
 官网：[barge-in.qiqiang.online](https://barge-in.qiqiang.online)
 
@@ -36,7 +36,8 @@ xattr -d com.apple.quarantine "/Applications/Barge In.app"
 - **同时到点**：按提醒队列逐条呈现，关闭一条立刻下一条，提醒层显示"还有 N 个提醒"；每个场景最多一条、日程与闹钟按条各一条，不静默丢弃
 - 调度：固定间隔或每天指定时刻，可设工作时段与休息日；活动出厂默认每天 10:30 / 14:30 / 16:30
 - **闹钟**：每条一个时刻加一句话，重复只有两种——每天（每个非休息日）或仅一次（未来 7 天内）；和喝水、活动一样受工作时段与休息日约束，冲突的条目在设置里标成「不会响」并写明原因；一次性响过或过期就消失
-- 设置分五个 tab：喝水 / 活动 / 日程 / 闹钟 / 通用；预设、节奏与启用开关按场景，工作时段、休息日与开机自启收在「通用」
+- 设置分五个 tab：喝水 / 活动 / 日程 / 闹钟 / 通用；预设、节奏与启用开关按场景，工作时段、休息日、开机自启与更新收在「通用」
+- **自动更新检查**：启动时与每 24 小时问一次 GitHub 有没有新版本（只读，不发送任何数据）；有新版时用「温柔」卡提醒，点卡片进「通用」，一键下载安装并重启。默认开启，可以关掉；关掉后 App 不再为更新联网，仍可在通用里手动检查
 - 免打扰 1 小时、开机自启
 - **人不在就不提醒**：锁屏、屏幕睡眠、切到别的用户时不采集到点，离开时连正在显示的那条也收起；回来时日程仍按「开始后 10 分钟」补，节奏类等下一个点，一次性闹钟若还在补发窗口里就补一次
 - 首次启动一次预设选择同时应用到四个场景（默认大字墙 · 标准），随后立即真实预览一次
@@ -59,9 +60,9 @@ xattr -d com.apple.quarantine "/Applications/Barge In.app"
 - 跳过与完成都只记录，不改变呈现；一次性闹钟响过、被关闭或过了那一天就从列表消失
 - 不在场不采集；一次性闹钟有 60 分钟补发窗口，并被当天工作时段结束封顶——下班之后不该再弹一条工作提醒
 
-界面原型：[菜单栏](docs/prototypes/popover.html?preset=schederror) · [设置](docs/prototypes/settings.html?view=alarm)。支持范围与技术方案见 [设计](docs/design.md)，联网的边界见 [ADR-0001](docs/adr/0001-network-for-calendar-subscriptions.md)，闹钟与日程为什么拆成两个场景见 [ADR-0002](docs/adr/0002-alarms-vs-calendar.md)，为什么不做自动升级见 [ADR-0003](docs/adr/0003-no-automatic-escalation.md)，发布模型见 [ADR-0004](docs/adr/0004-release-model-private-core.md)。
+界面原型：[菜单栏](docs/prototypes/popover.html?preset=schederror) · [设置](docs/prototypes/settings.html?view=app) · [更新通知](docs/prototypes/update.html)。支持范围与技术方案见 [设计](docs/design.md)，联网的边界见 [ADR-0001](docs/adr/0001-network-for-calendar-subscriptions.md) 与 [ADR-0006](docs/adr/0006-update-check-network.md)，闹钟与日程为什么拆成两个场景见 [ADR-0002](docs/adr/0002-alarms-vs-calendar.md)，为什么不做自动升级见 [ADR-0003](docs/adr/0003-no-automatic-escalation.md)，发布模型见 [ADR-0004](docs/adr/0004-release-model-private-core.md)。
 
-**关于联网**：日程是唯一会离开这台机器的功能。它只向你填的地址做只读请求（`GET` 取一条日历地址，`PROPFIND` / `REPORT` 取一个 CalDAV 账户），不上传任何内容，没有账号体系，没有遥测；关掉场景或删掉订阅就再也没有请求。
+**关于联网**：日程订阅与更新检查是仅有的两个联网功能，都只读。日程只向你填的地址做只读请求（`GET` 取一条日历地址，`PROPFIND` / `REPORT` 取一个 CalDAV 账户）；更新检查只向 GitHub 要一次最新版本号与发布说明。两者都不上传任何内容，没有账号体系，没有遥测；关掉日程场景并删掉订阅、再关掉「自动检查更新」，就再也没有请求。
 
 ## 界面
 
@@ -130,7 +131,7 @@ make run          # swift run
 - [技术方案](docs/design.md)
 - [竞品与市场调研](docs/competitor-scan.md)
 - [术语表](GLOSSARY.md)
-- 决策记录：[ADR-0001 日程订阅是唯一的联网功能](docs/adr/0001-network-for-calendar-subscriptions.md) · [ADR-0002 闹钟与日程是两个场景](docs/adr/0002-alarms-vs-calendar.md) · [ADR-0003 不做自动升级](docs/adr/0003-no-automatic-escalation.md) · [ADR-0004 私有核心（已被取代）](docs/adr/0004-release-model-private-core.md) · [ADR-0005 开源](docs/adr/0005-open-source.md)
+- 决策记录：[ADR-0001 日程订阅联网](docs/adr/0001-network-for-calendar-subscriptions.md) · [ADR-0002 闹钟与日程是两个场景](docs/adr/0002-alarms-vs-calendar.md) · [ADR-0003 不做自动升级](docs/adr/0003-no-automatic-escalation.md) · [ADR-0004 私有核心（已被取代）](docs/adr/0004-release-model-private-core.md) · [ADR-0005 开源](docs/adr/0005-open-source.md) · [ADR-0006 更新检查联网](docs/adr/0006-update-check-network.md)
 
 ## License
 

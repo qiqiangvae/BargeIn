@@ -24,6 +24,10 @@ struct AppState: Codable, Equatable {
     var pausedUntil: Date?
     var lastActiveDate: Date = Date()
     var hasOnboarded: Bool = false
+    /// 启动时与每 24 小时问一次 GitHub 有没有新版本；关掉后 App 不再为更新联网。
+    var checkForUpdates: Bool = true
+    /// 已经用温柔卡通知过的版本。同一个版本只提醒一次。
+    var lastNotifiedVersion: String?
 
     init() {
         water = WaterState()
@@ -86,6 +90,8 @@ extension AppState {
         pausedUntil = container.tolerantOptional(Date.self, forKey: .pausedUntil)
         lastActiveDate = container.tolerant(Date.self, forKey: .lastActiveDate, or: fallback.lastActiveDate)
         hasOnboarded = container.tolerant(Bool.self, forKey: .hasOnboarded, or: fallback.hasOnboarded)
+        checkForUpdates = container.tolerant(Bool.self, forKey: .checkForUpdates, or: fallback.checkForUpdates)
+        lastNotifiedVersion = container.tolerantOptional(String.self, forKey: .lastNotifiedVersion)
 
         // 解码后的收口：空实例列表、丢了的激活项都在这里回出厂；不改动读出来的业务数据。
         waterConfig.normalize(catalog: Catalog.makeInstances(for: .water), defaultActive: Catalog.defaultActive)

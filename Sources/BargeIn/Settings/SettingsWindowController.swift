@@ -15,6 +15,8 @@ final class SettingsWindowController {
     private var model: SettingsModel?
     private var escapeMonitor: Any?
 
+    var isVisible: Bool { window?.isVisible ?? false }
+
     func close() {
         removeEscapeMonitor()
         window?.close()
@@ -26,22 +28,26 @@ final class SettingsWindowController {
         store: StateStore,
         engine: ReminderEngine,
         feeds: FeedService,
+        updates: UpdateChecker,
         onboarding: Bool,
+        page: SettingsModel.Page? = nil,
         onPreview: @escaping (SceneID, PresetInstance) -> Void,
         onFinishOnboarding: @escaping () -> Void
     ) {
         if let window {
+            if let page { model?.selectPage(page) }
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
             return
         }
 
-        let model = SettingsModel(store: store, onboarding: onboarding)
+        let model = SettingsModel(store: store, onboarding: onboarding, page: page ?? .scene)
         let hosting = NSHostingController(
             rootView: SettingsView(
                 store: store,
                 engine: engine,
                 feeds: feeds,
+                updates: updates,
                 model: model,
                 onPreview: onPreview,
                 onFinishOnboarding: onFinishOnboarding

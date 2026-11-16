@@ -19,13 +19,14 @@ enum DevSnapshot {
         let store = StateStore(defaults: defaults)
         let engine = ReminderEngine(store: store, presence: Presence())
         let feeds = FeedService(store: store)
+        let updates = UpdateChecker(store: store, currentVersion: "0.4.2")
         store.set(\.water.consumedML, 1000)
         store.set(\.activity.doneToday, 2)
         engine.reschedule()
 
         func renderSettings(_ model: SettingsModel, _ name: String, dark: Bool = false) {
             let view = SettingsView(
-                store: store, engine: engine, feeds: feeds, model: model,
+                store: store, engine: engine, feeds: feeds, updates: updates, model: model,
                 onPreview: { _, _ in }, onFinishOnboarding: {}
             )
             .background(Color(nsColor: .windowBackgroundColor))
@@ -54,7 +55,22 @@ enum DevSnapshot {
         renderSettings(settingsModel, "settings.png")
         renderSettings(settingsModel, "settings-dark.png", dark: true)
 
+        // 版本卡：同一个页面按检查的生命周期换文案，五种状态各截一张。
+        let release = UpdateChecker.Release(
+            version: "0.5.0",
+            downloadURL: URL(string: "https://example.com/Barge-In-0.5.0-macos-arm64.zip")!,
+            pageURL: URL(string: "https://github.com/qiqiangvae/BargeIn/releases/tag/v0.5.0")!,
+            summary: "自动更新检查：有新版时用温柔卡提醒"
+        )
+        updates.setStatusForSnapshot(.available(release))
         renderSettings(SettingsModel(store: store, onboarding: false, page: .app), "settings-app.png")
+        updates.setStatusForSnapshot(.downloading(version: "0.5.0", received: 872_000, total: 2_081_617))
+        renderSettings(SettingsModel(store: store, onboarding: false, page: .app), "settings-app-downloading.png")
+        updates.setStatusForSnapshot(.upToDate)
+        renderSettings(SettingsModel(store: store, onboarding: false, page: .app), "settings-app-current.png")
+        updates.setStatusForSnapshot(.failed("连不上 GitHub，检查网络后再试"))
+        renderSettings(SettingsModel(store: store, onboarding: false, page: .app), "settings-app-failed.png")
+        updates.setStatusForSnapshot(.available(release))
         renderSettings(
             SettingsModel(store: store, onboarding: false, selectedScene: .activity),
             "settings-activity.png"
@@ -108,8 +124,10 @@ enum DevSnapshot {
         let onboardingStore = StateStore(defaults: onboardingDefaults)
         let onboardingEngine = ReminderEngine(store: onboardingStore, presence: Presence())
         let onboardingFeeds = FeedService(store: onboardingStore)
+        let onboardingUpdates = UpdateChecker(store: onboardingStore, currentVersion: "0.4.2")
         let onboarding = SettingsView(
             store: onboardingStore, engine: onboardingEngine, feeds: onboardingFeeds,
+            updates: onboardingUpdates,
             model: SettingsModel(store: onboardingStore, onboarding: true),
             onPreview: { _, _ in }, onFinishOnboarding: {}
         )
@@ -261,6 +279,10 @@ enum DevSnapshot {
         renderOverlay(waterModel, wallInstance, name: "overlay.png")
         renderOverlay(reminderModel(water, wallInstance, pending: 1), wallInstance, name: "overlay-pending.png")
         renderOverlay(waterModel, gentleInstance, name: "card.png", width: 360, height: 260)
+        let updateCard = UpdateNoticeCard(version: "0.5.0", current: "0.4.2", onOpen: {}, onClose: {})
+            .background(Color(nsColor: .windowBackgroundColor))
+        renderWindow(updateCard, width: 360, height: 260, name: "update-notice.png", in: dir)
+        renderWindow(updateCard, width: 360, height: 260, name: "update-notice-dark.png", in: dir, dark: true)
         let strictWall = PresetInstance(preset: .wall, name: "大字墙", intensity: .strict, builtIn: true)
         renderOverlay(
             reminderModel(water, strictWall),

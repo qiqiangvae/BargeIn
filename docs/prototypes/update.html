@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Barge In · 更新通知（原型）</title>
+<style>
+  :root{
+    --ink:#1d1d1f;
+    --ink2:rgba(0,0,0,.55);
+    --ink3:rgba(0,0,0,.40);
+    --accent:#0284c7;
+    --accent-text:#0369a1;
+    --card:rgba(255,255,255,.72);
+    --card-ink:#1d1d1f;
+    --stroke:rgba(0,0,0,.08);
+    --fill:rgba(0,0,0,.06);
+    --stage:#cfd6dd;
+    --menubar:rgba(255,255,255,.42);
+    --shadow:0 18px 44px rgba(0,0,0,.24), 0 2px 8px rgba(0,0,0,.12);
+  }
+  html[data-theme="dark"]{
+    --ink:#f5f5f7;
+    --ink2:rgba(255,255,255,.66);
+    --ink3:rgba(255,255,255,.42);
+    --accent:#38bdf8;
+    --accent-text:#7dd3fc;
+    --card:rgba(28,28,30,.72);
+    --card-ink:#f5f5f7;
+    --stroke:rgba(255,255,255,.10);
+    --fill:rgba(255,255,255,.10);
+    --stage:#0d1116;
+    --menubar:rgba(20,22,25,.55);
+    --shadow:0 22px 52px rgba(0,0,0,.62), 0 0 0 1px rgba(255,255,255,.06);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;color:var(--ink);background:var(--stage);
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+    padding:28px 20px 44px;
+  }
+  .demo-bar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;width:900px;max-width:100%}
+  .demo-bar .label{font-size:11px;color:var(--ink2);margin-right:2px}
+  .demo-bar .spacer{flex:1}
+  .chip{appearance:none;border:1px solid var(--stroke);background:rgba(255,255,255,.55);color:var(--ink2);
+    font:inherit;font-size:11.5px;padding:4px 10px;border-radius:999px;cursor:pointer}
+  html[data-theme="dark"] .chip{background:rgba(255,255,255,.06)}
+  .chip:hover{color:var(--ink)}
+  .chip[aria-pressed="true"]{color:var(--accent-text);border-color:color-mix(in srgb, var(--accent) 55%, transparent);
+    background:color-mix(in srgb, var(--accent) 10%, transparent)}
+  .chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* 桌面：验证材质卡托在什么背景上都立得住 */
+  .stage{position:relative;width:900px;max-width:100%;height:540px;border-radius:12px;overflow:hidden;
+    box-shadow:0 24px 60px rgba(0,0,0,.22);
+    background:
+      radial-gradient(520px 380px at 18% 12%, rgba(56,189,248,.34), transparent 66%),
+      radial-gradient(620px 420px at 82% 88%, rgba(250,204,21,.22), transparent 62%),
+      linear-gradient(140deg,#e8edf2 0%, #c9d6e2 48%, #aebdcd 100%)}
+  html[data-theme="dark"] .stage{background:
+      radial-gradient(520px 380px at 18% 12%, rgba(56,189,248,.20), transparent 66%),
+      radial-gradient(620px 420px at 82% 88%, rgba(250,204,21,.10), transparent 62%),
+      linear-gradient(140deg,#151b22 0%, #0e1319 52%, #161d26 100%)}
+
+  .menubar{position:absolute;left:0;right:0;top:0;height:26px;display:flex;align-items:center;gap:14px;
+    padding:0 12px;background:var(--menubar);backdrop-filter:blur(20px) saturate(1.5);
+    -webkit-backdrop-filter:blur(20px) saturate(1.5);border-bottom:1px solid rgba(0,0,0,.06)}
+  html[data-theme="dark"] .menubar{border-bottom-color:rgba(255,255,255,.08)}
+  .menubar .appname{font-size:11.5px;font-weight:600;color:var(--ink2)}
+  .menubar .items{margin-left:auto;display:flex;align-items:center;gap:12px;color:var(--ink2)}
+  .menubar .items svg{width:13px;height:13px;display:block;color:var(--ink2)}
+  .menubar .clock{font-size:11.5px;font-variant-numeric:tabular-nums}
+
+  /* ── 卡：与「温柔」同一块材质卡：320 宽、14 圆角、16 内边距 ── */
+  .notice{
+    position:absolute;top:78px;right:24px;width:320px;padding:16px;border-radius:14px;
+    background:var(--card);backdrop-filter:blur(24px) saturate(1.6);
+    -webkit-backdrop-filter:blur(24px) saturate(1.6);
+    box-shadow:var(--shadow);color:var(--card-ink);cursor:pointer;
+    display:flex;flex-direction:column;gap:12px;
+    transition:transform .16s ease, box-shadow .16s ease;
+  }
+  .notice[hidden]{display:none}
+  .notice:hover{transform:translateY(-1px)}
+  .notice:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .notice.is-gone{opacity:0;transform:translateY(-6px);pointer-events:none}
+  .notice .head{display:flex;align-items:flex-start;gap:10px}
+  .notice .title{font-family:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif;
+    font-size:20px;font-weight:600;line-height:1.25;flex:1}
+  .notice .line{font-size:13px;color:var(--ink2);margin:0;line-height:1.35}
+  .close{appearance:none;border:0;width:28px;height:28px;border-radius:50%;flex:0 0 28px;padding:0;
+    background:var(--fill);color:var(--ink2);cursor:pointer;display:grid;place-items:center;margin-top:-2px}
+  .close:hover{background:color-mix(in srgb,var(--fill) 60%, var(--ink3))}
+  .close svg{width:11px;height:11px}
+  .close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .go{appearance:none;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+    height:32px;padding:0 14px;border-radius:8px;color:var(--accent-text);
+    border:1px solid color-mix(in srgb,var(--accent) 85%, transparent);
+    background:color-mix(in srgb,var(--accent) 16%, transparent);
+    display:inline-flex;align-items:center;gap:6px;flex:0 0 auto}
+  .go:hover{background:color-mix(in srgb,var(--accent) 26%, transparent)}
+  .go:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .go svg{width:12px;height:12px}
+
+  .hint-line{width:900px;max-width:100%;margin:0;font-size:11.5px;color:var(--ink2);text-align:center}
+  .hint-line b{font-weight:600;color:var(--ink)}
+  .proto-note{width:900px;max-width:100%;margin:0;font-size:11px;line-height:1.75;color:var(--ink2);text-align:left}
+  .proto-note b{color:var(--ink)}
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important}
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-bar">
+  <span class="label">原型 · 状态</span>
+  <button class="chip" data-state="idle" aria-pressed="true">刚出现</button>
+  <button class="chip" data-state="gone" aria-pressed="false">已收起</button>
+  <span class="spacer"></span>
+  <span class="label">外观</span>
+  <button class="chip" data-theme-set="light" aria-pressed="true">浅色</button>
+  <button class="chip" data-theme-set="dark" aria-pressed="false">深色</button>
+</div>
+
+<div class="stage">
+  <div class="menubar" aria-hidden="true">
+    <span class="appname">Finder</span>
+    <span class="items">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21c-4.4 0-8-3.6-8-8 0-4 3-7.4 6.9-7.9C13 4.6 15 2 18 2c.6 0 1 .4 1 1 0 2.6-1.6 4.8-3.8 5.6.5.8.8 1.6.8 2.4 0 4.4-3.6 10-8 10z" opacity=".85"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9.5a12 12 0 0 1 18 0"/><path d="M6.5 13a8 8 0 0 1 11 0"/><path d="M10 16.4a3.4 3.4 0 0 1 4 0"/><circle cx="12" cy="19.4" r=".9" fill="currentColor" stroke="none"/></svg>
+      <span class="clock">15:04</span>
+    </span>
+  </div>
+
+  <div class="notice" id="notice" role="button" tabindex="0"
+       aria-label="有新版本 0.5.0，点一下打开通用设置">
+    <div class="head">
+      <span class="title">Barge In 有新版本 0.5.0</span>
+      <button class="close" id="close" aria-label="收起，这一版不再提醒">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <p class="line">当前 0.4.1 · 点一下打开通用设置</p>
+    <div>
+      <button class="go">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7.5 11 4.5 4.5 4.5-4.5"/><path d="M5 20h14"/></svg>
+        去更新
+      </button>
+    </div>
+  </div>
+</div>
+
+<p class="hint-line">点卡片 → 打开设置 · 通用；点 × 只收起，<b>这一版不再提醒</b>。这张卡不抢焦点，也不排队。</p>
+
+<p class="proto-note">
+  <b>用哪套呈现</b>：固定用「温柔」——右上角一张材质卡 + 一声提示音，与场景里选中的预设无关；更新通知不做大字墙、不做碎裂。它不是系统通知，不申请通知权限，也不需要「通知」这个系统开关。
+  <b>卡上写什么</b>：只说清楚「这是 Barge In 的更新」和版本号（`Barge In 有新版本 0.5.0`），不堆发布说明；这次更新了什么放在设置·通用的版本卡里（摘要 + 发布说明）。
+  <b>出现时</b>：不激活 App、不抢键盘焦点；正在显示一条提醒时先跳过，等下一次检查再出现，不叠两张卡。
+  <b>点哪里</b>：卡片任意处（或「去更新」）→ 关掉这张卡并打开设置窗口，落在「通用」tab 的版本卡；× 只收起，不打开任何东西。
+  <b>多久一次</b>：每个新版本只出现一次；收起或点过之后，同一个版本不再出现。自动检查关掉时这张卡不会出现，但通用页里的「再检查一次」仍然可用。
+  <b>不写状态</b>：这张卡不入提醒队列、不记账本、不影响下一次提醒；它的动作只有「打开设置」和「收起」。
+</p>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const root = document.documentElement;
+  const notice = document.getElementById('notice');
+  if (params.get('theme') === 'dark') root.dataset.theme = 'dark';
+
+  function goSettings() {
+    location.href = 'settings.html?view=app';
+  }
+
+  notice.addEventListener('click', goSettings);
+  notice.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goSettings(); }
+  });
+
+  document.getElementById('close').addEventListener('click', (e) => {
+    e.stopPropagation();
+    notice.classList.add('is-gone');
+    setTimeout(() => { notice.hidden = true; setState('gone'); }, 160);
+  });
+
+  function setState(key) {
+    document.querySelectorAll('[data-state]').forEach(b =>
+      b.setAttribute('aria-pressed', String(b.dataset.state === key)));
+    if (key === 'gone') {
+      notice.classList.add('is-gone');
+      setTimeout(() => { notice.hidden = true; }, 160);
+    } else {
+      notice.hidden = false;
+      requestAnimationFrame(() => notice.classList.remove('is-gone'));
+    }
+  }
+  document.querySelectorAll('[data-state]').forEach(b =>
+    b.addEventListener('click', () => setState(b.dataset.state)));
+
+  function syncTheme() {
+    const current = root.dataset.theme || 'light';
+    document.querySelectorAll('[data-theme-set]').forEach(b =>
+      b.setAttribute('aria-pressed', String(b.dataset.themeSet === current)));
+  }
+  document.querySelectorAll('[data-theme-set]').forEach(b =>
+    b.addEventListener('click', () => { root.dataset.theme = b.dataset.themeSet; syncTheme(); }));
+
+  syncTheme();
+  setState(params.get('state') === 'gone' ? 'gone' : 'idle');
+})();
+</script>
+</body>
+</html>

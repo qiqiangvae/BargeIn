@@ -1,8 +1,8 @@
 # Barge In 技术方案
 
-- 状态：对应 App v0.4（2026-11-14 纠偏）
-- 更新日期：2026-11-14
-- 相关文档：[产品文档](product.md) · [产品路线图](roadmap.md) · [竞品与市场调研](competitor-scan.md) · [术语表](../GLOSSARY.md) · [ADR-0001 日程订阅联网](adr/0001-network-for-calendar-subscriptions.md) · [ADR-0002 闹钟与日程是两个场景](adr/0002-alarms-vs-calendar.md) · [ADR-0003 不做自动升级](adr/0003-no-automatic-escalation.md) · [ADR-0004 发布模型](adr/0004-release-model-private-core.md)
+- 状态：对应 App v0.4.2（2026-11-16）
+- 更新日期：2026-11-16
+- 相关文档：[产品文档](product.md) · [产品路线图](roadmap.md) · [竞品与市场调研](competitor-scan.md) · [术语表](../GLOSSARY.md) · [ADR-0001 日程订阅联网](adr/0001-network-for-calendar-subscriptions.md) · [ADR-0002 闹钟与日程是两个场景](adr/0002-alarms-vs-calendar.md) · [ADR-0003 不做自动升级](adr/0003-no-automatic-escalation.md) · [ADR-0004 发布模型](adr/0004-release-model-private-core.md) · [ADR-0006 更新检查联网](adr/0006-update-check-network.md)
 
 ---
 
@@ -22,11 +22,11 @@ Barge In 是 macOS 上的反内耗打断工具：常驻菜单栏，在你被手�
 
 产品定位：**一个反内耗的打断引擎；它的提醒呈现由内置预设驱动，每个预设可以在每个场景下被实例化、改名、改文案、复制出更多张，呈现资源本身将来可以成为商品。场景有四个：喝水、活动、日程、闹钟。**
 
-日程场景是整个产品唯一联网的能力：只读订阅用户自己填写的日历地址，或用户自己在日历服务里生成的 CalDAV 凭据（[ADR-0001](adr/0001-network-for-calendar-subscriptions.md)）。没有账号体系、没有内置服务对接、没有写回、没有遥测。闹钟不联网：列表就在本机，是你手写进去的。
+联网只有两处，都只读：日程场景订阅用户自己填写的日历地址或用户在日历服务里生成的 CalDAV 凭据（[ADR-0001](adr/0001-network-for-calendar-subscriptions.md)）；更新检查向 GitHub 读一次最新版本号与发布说明（[ADR-0006](adr/0006-update-check-network.md)）。没有账号体系、没有内置服务对接、没有写回、没有遥测。闹钟不联网：列表就在本机，是你手写进去的。
 
 ## 2. 目标与非目标
 
-**目标（App v0.4）**
+**目标（App v0.4.2）**
 
 - 四个场景：喝水（累计量）、活动（纯定时）、日程（订阅日历的事件前置提醒）、闹钟（你自己定下的时刻）。每个场景有自己的启用开关、触发来源、预设实例与账本。
 - 日程场景的触发来源是外部日历：订阅 → 拉取 → 解析 → 事件按"开始时刻 − 前置"触发。前置全局一个值，默认 5 分钟。
@@ -38,6 +38,7 @@ Barge In 是 macOS 上的反内耗打断工具：常驻菜单栏，在你被手�
 - 日程与闹钟出厂**停用**；添加订阅并成功拉取后、或加第一条闹钟后提示开启。
 - 一次性闹钟的补发窗口 60 分钟，且被当天工作时段结束封顶；重复闹钟错过不补；免打扰按"不在场"处理。
 - `--selftest` 覆盖日历解析、重复事件展开与改期覆盖、豁免规则、按事件与按时刻去重的队列、失败降级、闹钟的有效判定与补发。
+- 更新检查只读 GitHub 的 releases atom；有新版时用温柔卡通知，点卡片进「通用」，在版本卡里下载安装并重启。
 
 **非目标（本版明确不做）**
 
@@ -48,6 +49,7 @@ Barge In 是 macOS 上的反内耗打断工具：常驻菜单栏，在你被手�
 - 全天事件的定时提醒；事件结束提醒；跨天事件的结束边界。
 - 闹钟的选星期几、节假日日历、自定义铃声与贪睡间隔、分组与历史、系统闹钟导入与 iCloud 同步；任何待办语义（勾选完成、截止日、优先级、清单排序）。
 - 合并呈现、优先级策略、久坐检测、统计图表、云同步、账号、iOS 端、通知中心、AppleScript/Shortcuts。
+- 增量更新、更新回滚入口、渠道与灰度、后台静默替换、系统通知中心。
 - 场景插件化：不做注册表、清单文件、目录扫描、可安装场景。
 
 ## 3. 整体设计
@@ -60,7 +62,7 @@ Barge In 是 macOS 上的反内耗打断工具：常驻菜单栏，在你被手�
 | 常驻入口 | `NSStatusItem` + `NSPopover` |
 | 设置窗口 | 独立 `NSWindow`（SwiftUI 内容），仅用户主动打开；内含五个 tab，预设网格直接列出该场景的全部卡片 |
 | 提醒层 | 每个连接的屏幕一个无边框 `NSPanel`，覆盖全部屏幕；同一时刻只有一条提醒 |
-| 网络 | **默认零网络**。只有日程场景启用且配置了订阅时，才向用户填写的地址发只读 GET |
+| 网络 | **默认零网络**。只有两处出站，都只读：日程场景启用且配置了订阅时向用户填写的地址发请求；自动检查更新开启时每 24 小时读一次 GitHub 的 releases feed |
 | 本地数据 | `UserDefaults` 存状态；`Application Support/BargeIn/` 存订阅缓存；Keychain 存密码 |
 
 ### 3.2 模块划分（SwiftPM 多 target）
@@ -605,7 +607,7 @@ CalDAV 的流程（以钉钉为基准，其他服务器同构）：
 
 日程 tab **没有「节奏」卡**：节奏就是日历本身。卡底一行说明"日程不受工作时段与休息日约束，免打扰仍然生效"。空订阅态下，「提醒预设」与「前置」照常可见，只是一个都不会触发。添加订阅的表单与编辑面板用同一套输入框皮肤。
 
-**通用 tab**：时间卡（工作时段起止、休息日 7 个胶囊、时段长度、结束早于开始的行内提示、"喝水、活动与闹钟共用这套时间；日程按事件自己的时间提醒"说明）、通用卡（开机自启，附一句"登录后在菜单栏静默启动，不打开窗口"），卡下方一行"零权限 · 数据只保存在本机；日程订阅是唯一联网功能，只读"。
+**通用 tab**：时间卡（工作时段起止、休息日 7 个胶囊、时段长度、结束早于开始的行内提示、"喝水、活动与闹钟共用这套时间；日程按事件自己的时间提醒"说明）、通用卡（开机自启，附一句"登录后在菜单栏静默启动，不打开窗口"；第二行是「自动检查更新」开关，附一句"启动时与每 24 小时查一次 GitHub；只读，不发送任何数据"）、版本卡（当前版本 + 检查 / 可更新 / 下载 / 安装 / 失败五种状态；有新版时写出这次更新了什么并给「发布说明」入口），卡下方一行"零权限 · 数据只保存在本机；日程订阅与更新检查是仅有的联网功能，都只读，更新检查可关闭"。
 
 **其余交互**：时间输入统一用自绘 `TimePicker`（`Sources/BargeIn/UI/TimePicker.swift`）：收起态是 24 小时制 `HH:mm`（`bordered: false` 时进入列表行，不画胶囊边框），点开是「时网格 + 分滑条」：时是 24 项 6 列网格，分是 0–59 的滑条（1 分钟步进）。单击 / 拖动即改、即时生效。`Esc` 逐级退：编辑面板展开时先收起，否则关闭设置窗口。
 
@@ -649,6 +651,46 @@ CalDAV 的流程（以钉钉为基准，其他服务器同构）：
 - 可访问性：大字墙对 VoiceOver 读作一个完整的 `大字词`；按钮都有中文标签；关闭键带 `help` 说明。
 - 中断永远即时生效：不拦截键盘、不阻止切换 App、不阻止强退。强度只体现在预设本身，不体现在"这次逃不掉"。
 
+### 5.5 更新检查与安装
+
+**检查**（`UpdateChecker`，`Sources/BargeIn/Core/UpdateChecker.swift`）
+
+- 时机：启动后 8 秒一次，之后每 24 小时一次；打开「自动检查更新」时当场查一次；设置里可随时手动检查。
+- 来源：`https://github.com/qiqiangvae/BargeIn/releases.atom`，一次拿到最新正式版的 tag、发布页与发布说明。**不走 GitHub API**：未登录的 API 每小时 60 次，共享出口 IP 实测会被 403 打满。
+- 版本比较按数字逐段进行：`0.4.10` > `0.4.9`，`v0.4.1` 与 `0.4.1` 同版，缺段按 0 补。读不到 `CFBundleShortVersionString`（`swift run` 的裸二进制）时既不检查也不给安装入口。
+- 安装包地址按发布命名约定拼：`releases/download/<tag>/Barge-In-<版本>-macos-arm64.zip`。
+- 「这次更新了什么」取发布说明 HTML 的第一个 `h1`–`h3` 小标题；没有标题就用发布名，只有版本号的发布名不当作摘要。发布流程据此约定：正文至少有一个小标题说明这次改了什么。
+
+**通知**
+
+- 检测到新版本且自动检查开着时，用「温柔」那张卡：右上角 360×260 的 `.regularMaterial` 卡片、一声提示音，与场景当前选中的预设无关。
+- 卡上只说「Barge In 有新版本 x.y.z」与当前版本，不显示发布说明正文；点标题区或「去更新」→ 关掉卡片并打开设置窗口的「通用」tab；× 只收起。
+- 不激活 App、不抢键盘焦点（`UpdateNoticePanel` 的 `canBecomeKey` / `canBecomeMain` 恒为 false，宿主视图 `acceptsFirstMouse` 恒为 true）；不进入提醒队列、不写账本、不影响下一次提醒。
+- 同一个版本只通知一次（`AppState.lastNotifiedVersion`）；正在显示提醒或设置窗口开着时不叠卡。
+- 面板层级 `.floating`、`canJoinAllSpaces + fullScreenAuxiliary`，只出现在主屏。
+
+**版本卡**
+
+| 状态 | 文案 | 动作 |
+|---|---|---|
+| 未检查 | 还没检查过 | `检查` |
+| 检查中 | 正在检查… | 禁用 |
+| 已是最新 | 已是最新 | `再检查一次` |
+| 有新版 | `新版本 x.y.z 可用` + 这次更新了什么 | `发布说明` / `更新` |
+| 下载中 | `正在下载 x.y.z…` + 进度条与百分比 | 无 |
+| 安装中 | `正在安装 x.y.z…` | 无 |
+| 失败 | 检查失败 + 具体原因 | `手动下载` / `重试` |
+
+通用卡第二行是「自动检查更新」开关（出厂开）。关掉后计时器立刻停，正在进行的下载不受影响。
+
+**安装**
+
+1. 下载到 `URLSession` 的临时文件，进度由 `URLSessionDownloadDelegate` 上报。
+2. 在**当前 bundle 所在目录**建临时目录（写不进去就报"没有权限"、退回手动下载），`ditto -x -k` 解包。
+3. 校验解出的 `Barge In.app`：`CFBundleIdentifier == com.bargein.app`、`CFBundleShortVersionString` 等于目标版本、`codesign --verify --deep --strict` 通过。
+4. 写一段 `/bin/sh` 脚本并启动它，然后 `NSApp.terminate(nil)`。脚本等本进程退出后：旧 bundle 移成同目录的隐藏备份 → 新 bundle 移到原位 → 去掉 quarantine → `open -n` 新版本 → 删掉备份与临时目录；任一步失败就还原旧 bundle 并重新打开。
+5. 不做增量更新与回滚入口；失败时版本卡留原因，App 本身继续可用。
+
 ## 6. 扩展点
 
 当前只留四个缝：
@@ -684,6 +726,8 @@ struct AppState: Codable, Equatable {
     var pausedUntil: Date?
     var lastActiveDate: Date
     var hasOnboarded: Bool
+    var checkForUpdates: Bool          // 出厂 true；关掉后不再自动联网
+    var lastNotifiedVersion: String?   // 同一个新版本只通知一次
 }
 ```
 
@@ -752,6 +796,16 @@ struct AppState: Codable, Equatable {
 | 旧数据没有场景字段 / 没有 `trigger` | 该场景整块回出厂，同一次存档里的其它场景与进度照留 |
 | 存档里一张卡或一条订阅读不出来 | 只丢那一条；内置卡由 `normalize()` 补回，其余卡片与订阅不动 |
 | 整份存档完全读不出来 | 原始 bytes 另存 `Application Support/BargeIn/state-unreadable-*.json`，用出厂值启动，不清空、不静默 |
+| 更新检查超时 / 失败 | 只在设置里留原因，不弹任何东西；自动检查下一轮重试 |
+| GitHub 未发布过版本 | 版本卡写"还没有发布版本可查"；不算错误弹窗 |
+| 发布 feed 里没有可拼的安装包 | 不进入"可更新"状态，按检查失败处理 |
+| 同一个版本已经通知过 | 不再弹卡；设置里仍能看到"有新版"并手动更新 |
+| 自动检查关闭 | 计时器立刻停；正在下载/安装的那一次不受影响 |
+| 不是打包后的 App（`swift run`） | 通用页说明"开发构建不检查更新"；不显示检查与安装入口 |
+| 当前目录不可写 | 报"没有写入 <目录> 的权限"，给 `手动下载`；不退出 App |
+| 下载包 bundle id / 版本 / 签名不符 | 放弃安装，旧版本继续用，版本卡写明原因 |
+| 替换 bundle 失败 | 脚本还原旧 bundle 并重新打开；用户看到的还旧版本 |
+| 安装期间 App 被强退 | 脚本等到进程真正退出才动手；临时目录与隐藏备份在下一次启动后可清理 |
 
 ## 9. 工程与构建
 
@@ -772,17 +826,17 @@ Makefile                 // make run / make app
 
 - **SwiftUI 属性包装器宏（`@State`、`@Binding`、`@Environment`）在 CLT 下不可用**：界面里所有可变状态一律用 `@Observable` 类，绑定用 `Binding(get:set:)` 手工构造。
 - `make app`：`swift build -c release` → 组装 `Barge In.app/Contents/{MacOS,Resources,Info.plist}` → 调 `--export-icon` 生成 `Contents/Resources/AppIcon.icns` → `codesign -s -`（ad-hoc）。
-- 五个开发期开关：`--selftest` 跑不依赖 UI 的检查，`--demo` 立即弹一次喝水提醒，`--snapshot <dir>` 把 popover / 设置 / 提醒层离屏渲染成 PNG，`--export-icon <dir>` 生成 iconset / icns 与菜单栏图预览，`--calendar-probe` 只取一次并把解析结果打到 stdout：`--calendar-probe ics <url>` 或 `--calendar-probe caldav <server> <username> [--discover]`（排查订阅用，密码从环境变量读，不落盘）。
+- 六个开发期开关：`--selftest` 跑不依赖 UI 的检查，`--demo` 立即弹一次喝水提醒，`--demo-update` 立即弹一次更新通知（不检查、不写状态），`--snapshot <dir>` 把 popover / 设置 / 提醒层离屏渲染成 PNG，`--export-icon <dir>` 生成 iconset / icns 与菜单栏图预览，`--calendar-probe` 只取一次并把解析结果打到 stdout：`--calendar-probe ics <url>` 或 `--calendar-probe caldav <server> <username> [--discover]`（排查订阅用，密码从环境变量读，不落盘）。
 - `Info.plist` 关键项：`LSUIElement=true`、`CFBundleIdentifier`、`LSMinimumSystemVersion`、`CFBundleIconFile`。
 - **不启用 App Sandbox**（SwiftPM + 脚本分发的现状），因此 `URLSession` 出站不需要额外 entitlement；凭据走 Keychain，不需要用户授权弹窗。ATS 默认只允许 https，与"只接受 https 订阅"一致，不加例外。
 - 正式分发需 Developer ID 证书 + 公证，放到发布阶段处理，不在本期代码范围内。
 
-**权限清单：仍然零权限。** 不使用 `UNUserNotificationCenter`、不使用辅助功能、不使用屏幕录制、不使用 Apple Events。日程场景新增的只有出站 HTTPS GET，不是系统权限。
+**权限清单：仍然零权限。** 不使用 `UNUserNotificationCenter`、不使用辅助功能、不使用屏幕录制、不使用 Apple Events。联网只有两处出站 HTTPS：日程订阅（`GET` / `PROPFIND` / `REPORT`）与更新检查（读一次 releases feed），都不是系统权限。
 
 ## 10. 发布与代码边界
 
 - 源码、文档、官网与 App 下载都在同一个公开仓库 `qiqiangvae/BargeIn`，MIT 许可（[ADR-0005](adr/0005-open-source.md)）。
-- 发布走带注释的 tag + GitHub Releases：`make app` 产出 `.app`，压缩成 zip 作为附件。
+- 发布走带注释的 tag + GitHub Releases：`make app` 产出 `.app`，压缩成 `Barge-In-<版本>-macos-arm64.zip` 作为附件；更新检查按这个命名拼下载地址，改名会让自动更新失效。
 - 当前不收费：全部功能免费；不做付费预设、市场、下载安装、账号或校验。
 - 代码里不存在付费判断；预设资源与引擎同仓库，随 App 分发。
 - 不建空目录、不预埋付费格式、不写未使用的分支。
@@ -794,7 +848,7 @@ Makefile                 // make run / make app
 - 唯一的结构性空白：**提醒呈现层可实例化、可改文案、可复制**。竞品的硬阻断全是设置里的开关，没人把"提醒长什么样"当内容做。
 - 喝水 + 活动 + 日程三者合体，且**日历年是反过来用的**：竞品用日历决定"什么时候别打扰"，Barge In 用日历决定"什么时候该把你拽出来"。
 - **仍然零权限**：出站 HTTPS GET 不是系统权限，不需要用户到系统设置里点允许。
-- 代价必须承认：日程是第一个联网功能，破了"零网络"的卖点，必须靠"只读、可选、默认关、可自证"把它变成可解释的例外（[ADR-0001](adr/0001-network-for-calendar-subscriptions.md)）。此外源码公开后，实现与素材会被整体复制，护城河只能靠迭代速度与克制。
+- 代价必须承认：日程订阅与更新检查是仅有的两个联网功能，破了"零网络"的卖点，必须靠"只读、可自证"把它变成可解释的例外：日程可选、默认关（[ADR-0001](adr/0001-network-for-calendar-subscriptions.md)），更新检查默认开但可关（[ADR-0006](adr/0006-update-check-network.md)）。此外源码公开后，实现与素材会被整体复制，护城河只能靠迭代速度与克制。
 
 **可行性**
 
@@ -817,10 +871,12 @@ Makefile                 // make run / make app
 | M9 日程 v0.3 | `SceneID.schedule`、`SceneTrigger`、`SceneSchedule`（ICS 解析 + RRULE + CalDAV 传输）、钉钉 CalDAV 全链路、订阅调度与缓存、Keychain、失败降级、队列按事件去重、设置第 4 个 tab、popover 日程行 | **真实钉钉 CalDAV 账号**能发现日历、拉到事件、在事件开始前 5 分钟提醒；改事件时间 30 分钟内同步；断网仍按缓存提醒并标注过期；19:00 与周六的日程照常提醒；两个相隔 5 分钟的事件逐条呈现 |
 | M10 闹钟 v0.4 | `SceneID.alarm`、`SceneTrigger.alarms`、`SceneAlarm`（闹钟模型 / 重复规则 / 无效判定 / 样例值）、`ScheduledMoment`、候选时刻铺点、一次性补发窗口、队列按发生时刻去重、设置第 5 个 tab、popover 闹钟行 | 11:30 的每天闹钟到点用大字墙呈现；跳过与完成只记录、不改变呈现；19:30 的闹钟标「不会响」且不触发；一次性落在周六标「那天是休息日」；改工作时段立即重判；离场 20 分钟回来补一次、70 分钟回来作废；一次性关闭或次日消失 |
 | M11 免费内容 v0.5 | 预设格式 + 内置免费预设 | 新增一套内置预设不需要改引擎代码；全部免费，界面没有购买入口 |
+| M13 更新检查 v0.4.2 | `UpdateChecker`（releases atom、版本比较、下载安装）、温柔更新通知、通用页开关与版本卡、`AppState` 两个字段 | 0.4.1 的机器检测到 0.4.2 后弹出温柔卡，点卡片落在设置·通用；关闭自动检查后不再联网；点更新能下载、校验、替换并重启；同一版本只通知一次 |
 | M12 公开仓库正式发布 v1.0 | 公证、公开仓库、官网、下载页 | 下载即开，无 Gatekeeper 拦截 |
 
 ## 修订记录
 
+- 2026-11-16：更新检查——releases atom 取版本与发布说明，温柔卡通知，通用页开关 + 版本卡 + 一键安装；联网例外增加一条（[ADR-0006](adr/0006-update-check-network.md)）
 - 2026-11-16：设置页细调——动作按钮改「编辑」，碎裂去掉裂纹参数（花纹每次随机），时间弹层的分改滑条
 - 2026-11-16：开源——源码并入公开仓库（MIT），发布边界与 M6 验收改写
 

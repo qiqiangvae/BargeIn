@@ -195,7 +195,8 @@ final class ReminderPresenter {
         action(self)
     }
 
-    private static func frame(for layout: WindowLayout, on screen: NSScreen) -> NSRect {
+    /// 提醒层与更新通知共用同一套摆位：后者只是借温柔卡的位置。
+    static func frame(for layout: WindowLayout, on screen: NSScreen) -> NSRect {
         switch layout {
         case .fullscreen:
             return screen.frame

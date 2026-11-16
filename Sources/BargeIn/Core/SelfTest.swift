@@ -27,6 +27,7 @@ enum SelfTest {
         calendarStore(check)
         alarms(check)
         legacyData(check)
+        updates(check)
         escapeCancel(check)
         escapeLayers(check)
         doubleReturnConfirm(check)
@@ -1093,6 +1094,10 @@ enum SelfTest {
                 "空数据回出厂两个场景",
                 state.waterConfig.instances.count == 3 && state.activityConfig.instances.count == 3
             )
+            check(
+                "老存档默认开着自动检查更新",
+                state.checkForUpdates && state.lastNotifiedVersion == nil
+            )
         } else {
             check("空数据可解码", false)
         }
@@ -1216,6 +1221,70 @@ enum SelfTest {
         let dir = StateStore.backupDirectory
         let names = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
         return Set(names.map { dir.appendingPathComponent($0) })
+    }
+
+    // MARK: - 更新检查
+
+    private static func updates(_ check: (String, Bool) -> Void) {
+        check("版本: 0.5.0 比 0.4.1 新", UpdateChecker.isNewer("0.5.0", than: "0.4.1"))
+        check("版本: 逐段按数字比，0.4.10 比 0.4.9 新", UpdateChecker.isNewer("0.4.10", than: "0.4.9"))
+        check("版本: 带 v 的 tag 与裸版本同版", !UpdateChecker.isNewer("v0.4.1", than: "0.4.1"))
+        check("版本: 同版不算更新", !UpdateChecker.isNewer("0.4.1", than: "0.4.1"))
+        check("版本: 缺段按 0 补", !UpdateChecker.isNewer("0.4", than: "0.4.0"))
+        check("版本: 旧版本不算更新", !UpdateChecker.isNewer("0.4.0", than: "0.4.1"))
+
+        let atom = #"""
+        <?xml version="1.0" encoding="UTF-8"?>
+        <feed xmlns="http://www.w3.org/2005/Atom">
+          <entry>
+            <updated>2026-11-16T08:23:52Z</updated>
+            <link rel="alternate" type="text/html" href="https://github.com/qiqiangvae/BargeIn/releases/tag/v0.5.0"/>
+            <title>Barge In 0.5.0</title>
+            <content type="html">&lt;p&gt;产品介绍&lt;/p&gt;
+        &lt;h2&gt;变更：自动更新检查&lt;/h2&gt;
+        &lt;ul&gt;&lt;li&gt;有新版时用温柔卡提醒&lt;/li&gt;&lt;/ul&gt;</content>
+          </entry>
+        </feed>
+        """#
+        let release = UpdateChecker.release(fromFeed: Data(atom.utf8))
+        check("发布: 从 atom 取到版本", release?.version == "0.5.0")
+        check(
+            "发布: 按发布命名拼出安装包",
+            release?.downloadURL.absoluteString
+                == "https://github.com/qiqiangvae/BargeIn/releases/download/v0.5.0/Barge-In-0.5.0-macos-arm64.zip"
+        )
+        check(
+            "发布: 带出发布页",
+            release?.pageURL.absoluteString
+                == "https://github.com/qiqiangvae/BargeIn/releases/tag/v0.5.0"
+        )
+        check("发布: 第一个小标题就是这次更新了什么", release?.summary == "变更：自动更新检查")
+        check(
+            "发布: 没有小标题就用发布名",
+            UpdateChecker.summary(from: nil, title: "自动更新检查", version: "0.5.0") == "自动更新检查"
+        )
+        check(
+            "发布: 只有版本号的标题不当作摘要",
+            UpdateChecker.summary(from: nil, title: "Barge In 0.5.0", version: "0.5.0") == nil
+        )
+        check("发布: 坏 atom 解析为空", UpdateChecker.release(fromFeed: Data("<feed/>".utf8)) == nil)
+
+        let suiteName = "com.bargein.selftest.updates"
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
+        defaults.removePersistentDomain(forName: suiteName)
+        let store = StateStore(defaults: defaults)
+        check("更新: 默认开着自动检查", store.state.checkForUpdates)
+        store.set(\.checkForUpdates, false)
+        store.set(\.lastNotifiedVersion, "0.5.0")
+        let reloaded = StateStore(defaults: defaults)
+        check(
+            "更新: 开关与已通知版本都落盘",
+            !reloaded.state.checkForUpdates && reloaded.state.lastNotifiedVersion == "0.5.0"
+        )
+        let model = SettingsModel(store: reloaded, onboarding: false)
+        model.selectPage(.app)
+        check("更新: 点通知卡落在通用页", model.tabIndex == SceneID.allCases.count)
+        defaults.removePersistentDomain(forName: suiteName)
     }
 
     // MARK: - 提醒层

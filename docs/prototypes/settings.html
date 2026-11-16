@@ -228,6 +228,19 @@
   .ghost.num{font-family:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif;font-variant-numeric:tabular-nums;
     font-size:13px;font-weight:600;padding:0 10px;min-width:64px;justify-content:center}
 
+  /* 版本卡：更新动作只有一个，安静状态用 ghost，有更新时才用主按钮 */
+  .primary{appearance:none;font:inherit;font-size:12px;font-weight:600;color:var(--accent-text);cursor:pointer;
+    height:28px;padding:0 14px;border-radius:8px;
+    border:1px solid color-mix(in srgb,var(--accent) 85%,transparent);
+    background:color-mix(in srgb,var(--accent) 16%,transparent)}
+  .primary:hover{background:color-mix(in srgb,var(--accent) 24%,transparent)}
+  .primary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .primary[disabled]{opacity:.45;cursor:default}
+  .progress{display:flex;flex-direction:column;gap:6px}
+  .progress .bar{height:4px;border-radius:2px;background:var(--fill);overflow:hidden}
+  .progress .bar i{display:block;height:100%;border-radius:2px;background:var(--accent);transition:width .2s ease}
+  .error-line{color:var(--danger)}
+
   .pills{display:flex;gap:5px}
   .day{appearance:none;width:30px;height:28px;border-radius:8px;cursor:pointer;font:inherit;font-size:12px;
     color:var(--ink2);background:var(--fill-weak);border:1px solid var(--stroke)}
@@ -383,6 +396,9 @@
   <button class="chip" data-view="addsub" aria-pressed="false">添加订阅</button>
   <button class="chip" data-view="list" aria-pressed="false">今日列表</button>
   <button class="chip" data-view="app" aria-pressed="false">通用</button>
+  <button class="chip" data-view="app-downloading" aria-pressed="false">下载中</button>
+  <button class="chip" data-view="app-current" aria-pressed="false">已是最新</button>
+  <button class="chip" data-view="app-failed" aria-pressed="false">检查失败</button>
   <span class="spacer"></span>
   <span class="label">外观</span>
   <button class="chip" data-theme-set="light" aria-pressed="true">浅色</button>
@@ -812,9 +828,33 @@
             <span class="sp"></span>
             <button class="switch" role="switch" aria-checked="true" aria-label="开机时启动"></button>
           </div>
+          <hr class="sep">
+          <div class="row">
+            <span class="txt"><span class="t">自动检查更新</span><span class="h">启动时与每 24 小时查一次 GitHub；只读，不发送任何数据</span></span>
+            <span class="sp"></span>
+            <button class="switch" role="switch" aria-checked="true" aria-label="自动检查更新"></button>
+          </div>
         </section>
 
-        <p class="privacy">零权限 · 数据只保存在本机；日程订阅是唯一联网功能，只读</p>
+        <section class="card" data-version-card>
+          <div class="card-head"><h2>版本</h2><span class="foot" data-version-foot>当前 0.4.1</span></div>
+          <div class="row">
+            <span class="txt">
+              <span class="t" data-version-title>新版本 0.5.0 可用</span>
+              <span class="h" data-version-hint>变更：自动更新检查与温柔通知</span>
+            </span>
+            <span class="sp"></span>
+            <button class="ghost" data-version-alt hidden>发布说明</button>
+            <button class="primary" data-version-action>更新</button>
+          </div>
+          <div class="progress" data-version-progress hidden>
+            <div class="bar"><i data-version-bar style="width:42%"></i></div>
+            <span class="note" data-version-progress-note>下载中 42% · 0.8 / 1.9 MB</span>
+          </div>
+          <p class="note" data-version-note>更新包从 GitHub Releases 下载；装完 App 自动重启。</p>
+        </section>
+
+        <p class="privacy">零权限 · 数据只保存在本机；日程订阅与更新检查是仅有的联网功能，都只读，更新检查可关闭</p>
       </div>
     </section>
 
@@ -849,6 +889,7 @@
   ⑤ 取消「全部预设」二级页，所有卡就在首页网格里往下排，复制出来的卡当场看得见；⑥ 窗口宽高都固定：切 tab 只换内容、不换窗口高度（高度随内容重算时，切一次 tab 窗口要缩两下、界面跟着抖），内容超出就在窗内滚动，比默认页矮的 tab 底部留白。
   细节：删除入口一律先安静再危险（第一下变「确认删除」），指定时刻收成一个列表（时间在左、删除在右、行间有分隔线），不再每行一个红底垃圾桶、左右两截；输入框只有一种皮肤；字号收成 11 / 12 / 13 三档。预设卡下不再有「跳过 N 次」的升级说明：强度是预设自带的，界面不展示跳过次数。
   这一版另改三处：动作按钮从「编辑文案」改成「编辑」（它改名称、强度与文案，不只文案）；碎裂不再暴露裂纹参数，花纹每次提醒重新生成；时间弹层里的分钟从 12 个格子改成一条滑条，时仍是网格。
+  更新这一版：通用 tab 加「自动检查更新」开关与「版本」卡。检查更新没有单独页面——静默检查、有新版本时的温柔通知卡见 <a href="update.html">update.html</a>；版本卡承载检查 / 可更新 / 下载 / 安装 / 失败这五种状态，主按钮只在这张卡里换形态。有新版时版本卡写出「这次更新了什么」（发布说明里的第一个小标题）并给「发布说明」入口；通知卡只说这是 Barge In 的更新，不堆正文。联网口径随之改为「日程订阅 + 更新检查，都只读，更新检查可关闭」。
 </p>
 
 <script>
@@ -909,7 +950,7 @@
 
   // 选中的卡按场景分开记：一个场景的选用不该跟着另一个场景走
   const state = { scene: 'water', many: false, editing: false, times: false, timePop: false,
-    selected: { water: 0, activity: 0, schedule: 0, alarm: 0 } };
+    version: 'available', selected: { water: 0, activity: 0, schedule: 0, alarm: 0 } };
   const selIndex = () => state.selected[state.scene] ?? 0;
 
   const $ = (s) => document.querySelector(s);
@@ -1076,6 +1117,81 @@
     if (summary) summary.textContent = s.summary;
   }
 
+  // 版本卡：同一张卡按一次检查的生命周期换文案，不另开二级页
+  const VERSION_STATES = {
+    available: {
+      title: '新版本 0.5.0 可用', hint: '变更：自动更新检查与温柔通知', action: '更新', primary: true,
+      alt: '发布说明', note: '更新包从 GitHub Releases 下载；装完 App 自动重启。'
+    },
+    current: {
+      title: '已是最新', hint: '0.4.1 是当前最新版', action: '再检查一次',
+      note: '自动检查关掉后不会联网；也可以在这里手动检查。'
+    },
+    checking: {
+      title: '正在检查…', hint: '只向 GitHub 询问一次最新版本号', action: '检查中', disabled: true,
+      note: ''
+    },
+    downloading: {
+      title: '正在下载 0.5.0', hint: '完成后自动安装并重启', progress: 42,
+      progressNote: '下载中 42% · 0.8 / 1.9 MB', note: '下载可以中途关窗，进度不会丢。'
+    },
+    installing: {
+      title: '正在安装 0.5.0', hint: 'App 会退出，然后重新打开', note: '安装期间不要强退进程。'
+    },
+    failed: {
+      title: '检查失败', hint: '连不上 GitHub，或接口暂时不可用', action: '重试', primary: true,
+      alt: '手动下载', error: true,
+      note: '自动检查下一轮会重试；也可以直接去 Releases 手动下载。'
+    }
+  };
+
+  function renderVersion() {
+    const card = document.querySelector('[data-version-card]');
+    if (!card) return;
+    const v = VERSION_STATES[state.version] || VERSION_STATES.available;
+    card.querySelector('[data-version-title]').textContent = v.title;
+    const hint = card.querySelector('[data-version-hint]');
+    hint.textContent = v.hint || '';
+    hint.classList.toggle('error-line', Boolean(v.error));
+
+    const action = card.querySelector('[data-version-action]');
+    action.hidden = !v.action;
+    if (v.action) {
+      action.textContent = v.action;
+      action.className = v.primary ? 'primary' : 'ghost';
+      action.disabled = Boolean(v.disabled);
+    }
+    const alt = card.querySelector('[data-version-alt]');
+    alt.hidden = !v.alt;
+    if (v.alt) alt.textContent = v.alt;
+
+    const progress = card.querySelector('[data-version-progress]');
+    progress.hidden = v.progress == null;
+    if (v.progress != null) {
+      card.querySelector('[data-version-bar]').style.width = v.progress + '%';
+      card.querySelector('[data-version-progress-note]').textContent = v.progressNote || '';
+    }
+    card.querySelector('[data-version-note]').textContent = v.note || '';
+  }
+
+  // 原型里点「更新」能看到一次下载 → 安装 → 已是最新；真实实现里最后一步是 App 重启。
+  let versionBusy = false;
+  document.querySelector('[data-version-action]').addEventListener('click', () => {
+    if (versionBusy) return;
+    if (state.version === 'available') {
+      versionBusy = true;
+      state.version = 'downloading';
+      render();
+      setTimeout(() => { state.version = 'installing'; render(); }, 1500);
+      setTimeout(() => { state.version = 'current'; versionBusy = false; render(); }, 3000);
+    } else if (state.version === 'current' || state.version === 'failed') {
+      versionBusy = true;
+      state.version = 'checking';
+      render();
+      setTimeout(() => { state.version = 'available'; versionBusy = false; render(); }, 1200);
+    }
+  });
+
   function render() {
     document.querySelectorAll('.page').forEach(el => el.classList.remove('is-active'));
     page().classList.add('is-active');
@@ -1100,6 +1216,7 @@
 
     renderSceneBits();
     if (state.scene !== 'app') renderPresets();
+    renderVersion();
     renderTimePop();
   }
   // ── tab ──
@@ -1202,7 +1319,10 @@
       ding.classList.add('is-open');
       document.querySelector('[aria-controls="events-ding"]').setAttribute('aria-expanded', 'true');
     },
-    app: () => { state.scene = 'app'; },
+    app: () => { state.scene = 'app'; state.version = 'available'; },
+    'app-downloading': () => { state.scene = 'app'; state.version = 'downloading'; },
+    'app-current': () => { state.scene = 'app'; state.version = 'current'; },
+    'app-failed': () => { state.scene = 'app'; state.version = 'failed'; },
     all: () => { state.scene = 'water'; state.many = true; }   // 旧直链
   };
 
