@@ -62,8 +62,8 @@
     background:color-mix(in srgb, var(--accent) 10%, transparent)}
   .chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-  /* 窗口：宽度固定，高度跟着页面内容走 */
-  .window{width:640px;max-width:100%;border-radius:10px;overflow:hidden;background:var(--window);
+  /* 窗口：宽高都固定。切 tab 不换高，内容超出在窗内滚动 */
+  .window{width:640px;max-width:100%;height:730px;border-radius:10px;overflow:hidden;background:var(--window);
     box-shadow:var(--windshadow);display:flex;flex-direction:column}
   .titlebar{height:28px;flex:0 0 28px;display:flex;align-items:center;padding:0 12px;position:relative;
     background:var(--window);border-bottom:1px solid var(--stroke)}
@@ -76,17 +76,17 @@
 
   /* 顶部：tab + 场景开关 */
   .tabbar{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:14px 20px 8px}
-  .tabs{width:320px;height:32px}
+  .tabs{width:400px;height:32px}
   .tabs button{font-size:12.5px}
   .tabs button[aria-selected="true"]{background:var(--segment);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.10)}
   .scene-switch{display:flex;align-items:center;gap:8px;margin-left:auto}
   .scene-switch .label{font-size:11px;color:var(--ink2)}
 
   /* 页面 */
-  .pages{display:flex;flex-direction:column;min-height:0}
-  .page{display:none;flex-direction:column;min-height:0}
+  .pages{display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
+  .page{display:none;flex-direction:column;min-height:0;flex:1 1 auto}
   .page.is-active{display:flex}
-  .scroll{padding:12px 20px 20px;display:flex;flex-direction:column;gap:14px;max-height:596px;overflow-y:auto;
+  .scroll{padding:12px 20px 20px;display:flex;flex-direction:column;gap:14px;flex:1 1 auto;overflow-y:auto;
     -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 14px),transparent);
     mask-image:linear-gradient(to bottom,#000 calc(100% - 14px),transparent)}
   .scroll::-webkit-scrollbar{width:8px}
@@ -304,6 +304,7 @@
   .sub-ev.is-past .n{color:var(--ink2)}
   .sub-ev.is-past .loc{color:var(--ink3);opacity:.7}
   .sub-empty{font-size:11px;color:var(--ink3);padding:3px 0}
+  .alarm-edit{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:10px;background:var(--fill-weak)}
   .add-sub{appearance:none;font:inherit;font-size:12px;font-weight:500;color:var(--ink2);cursor:pointer;
     height:32px;border-radius:9px;background:none;display:flex;align-items:center;justify-content:center;gap:5px;
     border:1px dashed var(--stroke)}
@@ -369,6 +370,7 @@
       <button role="tab" data-tab="water" aria-selected="true">喝水</button>
       <button role="tab" data-tab="activity" aria-selected="false">活动</button>
       <button role="tab" data-tab="schedule" aria-selected="false">日程</button>
+      <button role="tab" data-tab="alarm" aria-selected="false">闹钟</button>
       <button role="tab" data-tab="app" aria-selected="false">通用</button>
     </div>
   </div>
@@ -447,11 +449,6 @@
             </label>
             <div class="vars" data-vars></div>
           </div>
-
-          <p class="notice" data-notice hidden>
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2 1.5 21h21L12 2Zm1 15h-2v-2h2v2Zm0-4h-2V8h2v5Z"/></svg>
-            <span>跳过 3 次，中断按钮延迟 10 秒</span>
-          </p>
         </section>
 
         <section class="card" data-rhythm>
@@ -678,6 +675,90 @@
       </div>
     </section>
 
+    <section class="page" id="pageAlarm" role="tabpanel" aria-label="闹钟">
+      <div class="scroll">
+        <div class="scene-bar">
+          <span class="summary" data-summary></span>
+          <span class="sp"></span>
+          <span class="label">启用</span>
+          <button class="switch" role="switch" aria-checked="false" aria-label="启用闹钟场景"></button>
+        </div>
+        <div data-slot-presets></div>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>闹钟</h2>
+            <div class="head-right"><span class="foot">3 条 · 今天 1 条</span></div>
+          </div>
+
+          <div class="subs">
+            <div class="sub">
+              <span class="state"></span>
+              <div class="body">
+                <span class="name">11:30 · 点外卖</span>
+                <span class="meta">每天</span>
+              </div>
+              <button class="switch" role="switch" aria-checked="true" aria-label="启用 11:30 点外卖"></button>
+              <button class="del" data-confirm-delete aria-label="删除 11:30 点外卖">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V5h5v2M6.5 7l.9 12.2A2 2 0 0 0 9.4 21h5.2a2 2 0 0 0 2-1.8L17.5 7"/></svg>
+              </button>
+            </div>
+
+            <div class="sub">
+              <span class="state"></span>
+              <div class="body">
+                <span class="name">16:00 · 交周报</span>
+                <span class="meta">仅一次 · 11月16日</span>
+              </div>
+              <button class="switch" role="switch" aria-checked="true" aria-label="启用 16:00 交周报"></button>
+              <button class="del" data-confirm-delete aria-label="删除 16:00 交周报">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V5h5v2M6.5 7l.9 12.2A2 2 0 0 0 9.4 21h5.2a2 2 0 0 0 2-1.8L17.5 7"/></svg>
+              </button>
+            </div>
+
+            <div class="alarm-edit">
+              <label class="field"><span class="field-label">内容</span><input type="text" value="交周报"></label>
+              <div class="row" style="gap:10px">
+                <button class="ghost num">16:00</button>
+                <span class="sp"></span>
+                <div class="seg" role="radiogroup" aria-label="重复" style="width:132px">
+                  <button role="radio" aria-checked="false">每天</button>
+                  <button role="radio" aria-checked="true">仅一次</button>
+                </div>
+              </div>
+              <div class="row" style="gap:10px">
+                <span class="t">日期</span>
+                <span class="sp"></span>
+                <button class="ghost num">11月16日 · 周一</button>
+              </div>
+              <p class="note">仅一次只受理未来 7 天内的一天；那天是休息日就标为无效。</p>
+            </div>
+
+            <div class="sub is-stale">
+              <span class="state"></span>
+              <div class="body">
+                <span class="name">19:30 · 去健身</span>
+                <span class="meta">每天 · 不在工作时段内，不会响</span>
+              </div>
+              <button class="switch" role="switch" aria-checked="true" aria-label="启用 19:30 去健身"></button>
+              <button class="del" data-confirm-delete aria-label="删除 19:30 去健身">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V5h5v2M6.5 7l.9 12.2A2 2 0 0 0 9.4 21h5.2a2 2 0 0 0 2-1.8L17.5 7"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <button class="add-sub">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            添加闹钟
+          </button>
+
+          <p class="note">时刻不在工作时段内、或一次性闹钟那天是休息日时，这条会标为无效：留在列表里、写明原因，但不参与调度，也不记账本。</p>
+        </section>
+
+        <p class="privacy">闹钟受工作时段与休息日约束，免打扰仍然生效</p>
+      </div>
+    </section>
+
     <section class="page" id="pageApp" role="tabpanel" aria-label="通用">
       <div class="scroll">
         <section class="card">
@@ -699,7 +780,7 @@
               <button class="day" aria-pressed="true" aria-label="周日">日</button>
             </span>
           </div>
-          <p class="note">喝水与活动共用这套时间；日程按事件自己的时间提醒，不受这里约束。</p>
+          <p class="note">喝水、活动与闹钟共用这套时间；日程按事件自己的时间提醒，不受这里约束。</p>
         </section>
 
         <section class="card">
@@ -728,8 +809,8 @@
 <p class="proto-note">
   这一版动了六处结构：① 第四个 tab 从「设置」改名「通用」，场景与 App 级设置不再同名；② 每个场景页顶部只留一句说明 + 启用开关，场景名只在 tab 上出现一次；
   ③ 预设卡换成真实呈现的微缩图（大字墙的重复大字、温柔的右上卡片、碎裂的裂纹），替掉「图标 + 一句话」；④ 编辑 / 预览 / 复制 / 删除收到选中卡下方的一行动作，删掉每张卡上三个图标按钮；
-  ⑤ 取消「全部预设」二级页，所有卡就在首页网格里往下排，复制出来的卡当场看得见；⑥ 窗口宽固定、高跟着内容走，通用页不再留 3/5 的空白。
-  细节：删除入口一律先安静再危险（第一下变「确认删除」），指定时刻收成一个列表（时间在左、删除在右、行间有分隔线），不再每行一个红底垃圾桶、左右两截；输入框只有一种皮肤；字号收成 11 / 12 / 13 三档。
+  ⑤ 取消「全部预设」二级页，所有卡就在首页网格里往下排，复制出来的卡当场看得见；⑥ 窗口宽高都固定：切 tab 只换内容、不换窗口高度（高度随内容重算时，切一次 tab 窗口要缩两下、界面跟着抖），内容超出就在窗内滚动，比默认页矮的 tab 底部留白。
+  细节：删除入口一律先安静再危险（第一下变「确认删除」），指定时刻收成一个列表（时间在左、删除在右、行间有分隔线），不再每行一个红底垃圾桶、左右两截；输入框只有一种皮肤；字号收成 11 / 12 / 13 三档。预设卡下不再有「跳过 N 次」的升级说明：强度是预设自带的，界面不展示跳过次数。
 </p>
 
 <script>
@@ -762,6 +843,14 @@
       title2: 'Q4 产品评审',
       progress: '9:30 开始 · 还有 5 分钟',
       vars: ['{title}', '{start}', '{minutes}', '{location}']
+    },
+    alarm: {
+      title: '闹钟',
+      summary: '你自己定的时刻：到点用同一套呈现把你拽出来',
+      word: '点外卖',
+      title2: '点外卖',
+      progress: '11:30 · 每天',
+      vars: ['{title}', '{start}']
     }
   };
 
@@ -782,7 +871,7 @@
 
   // 选中的卡按场景分开记：一个场景的选用不该跟着另一个场景走
   const state = { scene: 'water', many: false, editing: false, times: false,
-    selected: { water: 0, activity: 0, schedule: 0 } };
+    selected: { water: 0, activity: 0, schedule: 0, alarm: 0 } };
   const selIndex = () => state.selected[state.scene] ?? 0;
 
   const $ = (s) => document.querySelector(s);
@@ -1009,6 +1098,7 @@
     many: () => { state.scene = 'water'; state.many = true; state.editing = false; },
     times: () => { state.scene = 'water'; state.many = false; state.times = true; },
     schedule: () => { state.scene = 'schedule'; },
+    alarm: () => { state.scene = 'alarm'; },
     addsub: () => { state.scene = 'schedule'; setAddForm(true); },
     list: () => {
       state.scene = 'schedule';

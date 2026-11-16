@@ -140,9 +140,6 @@
   .status.is-success .icon{color:var(--success)}
   .status.is-warn .icon{color:var(--warn)}
 
-  .ledger{display:flex;align-items:flex-start;gap:6px;font-size:11px;line-height:1.35;color:var(--warn)}
-  .ledger .icon{flex:0 0 auto;width:10px;height:10px;margin-top:2px}
-
   /* ── 活动 ── */
   .activity{display:flex;flex-direction:column;gap:8px}
   .activity-card{
@@ -181,7 +178,9 @@
   /* ── 底栏 ── */
   .footer{display:flex;flex-direction:column;gap:8px;margin-top:2px}
   .divider{height:1px;background:var(--stroke);opacity:.6}
+  /* 设置与退出各靠一边，免打扰居中：两个相邻的整宽菜单项挨着最容易点错，中间留出整段空 */
   .footer-row{display:flex;align-items:center;gap:2px}
+  .footer-row .spacer{flex:1}
   .footer-btn{
     appearance:none;border:0;background:none;color:var(--ink2);font:inherit;font-size:11px;
     padding:5px 7px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;
@@ -234,11 +233,6 @@
       <path d="M10.3 6.7 12.9 9.1"/>
     </g>
   </symbol>
-  <symbol id="i-warn" viewBox="0 0 20 20">
-    <path d="M10 2.6 18 16.8H2z" fill="currentColor"/>
-    <path d="M10 7.6v3.9" fill="none" stroke="var(--surface)" stroke-width="1.8" stroke-linecap="round"/>
-    <circle cx="10" cy="14.1" r=".95" fill="var(--surface)"/>
-  </symbol>
   <symbol id="i-check" viewBox="0 0 20 20">
     <circle cx="10" cy="10" r="7.6" fill="currentColor"/>
     <path d="M6.6 10.3 8.9 12.6l4.7-5" fill="none" stroke="var(--surface)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
@@ -261,11 +255,11 @@
     <span class="label">状态</span>
     <button class="chip" data-preset="default" aria-pressed="true">默认</button>
     <button class="chip" data-preset="done" aria-pressed="false">已达标</button>
-    <button class="chip" data-preset="skip" aria-pressed="false">跳过 1 次</button>
     <button class="chip" data-preset="paused" aria-pressed="false">免打扰中</button>
     <button class="chip" data-preset="wateroff" aria-pressed="false">喝水停用</button>
     <button class="chip" data-preset="alloff" aria-pressed="false">都停用</button>
     <button class="chip" data-preset="schednone" aria-pressed="false">日程·无事件</button>
+    <button class="chip" data-preset="schedlater" aria-pressed="false">日程·几天后</button>
     <button class="chip" data-preset="schederror" aria-pressed="false">日程·认证失败</button>
   </div>
   <div class="chip-row">
@@ -306,11 +300,6 @@
       <svg class="icon"><use id="waterStatusIcon" href="#i-clock"/></svg>
       <span id="waterStatusText">下次 明天 9:00</span>
     </div>
-
-    <div class="ledger" id="waterLedger" hidden>
-      <svg class="icon"><use href="#i-warn"/></svg>
-      <span id="waterLedgerText">跳过 1 次，中断按钮延迟 5 秒</span>
-    </div>
   </section>
 
   <section class="activity" id="activitySection">
@@ -322,12 +311,7 @@
       </div>
       <span class="spacer"></span>
       <button class="quiet activity-btn" id="activityBtn">活动了</button>
-    </div>
-    <div class="ledger" id="activityLedger" hidden>
-      <svg class="icon"><use href="#i-warn"/></svg>
-      <span>跳过 1 次，中断按钮延迟 5 秒</span>
-    </div>
-  </section>
+    </div>  </section>
 
   <section class="activity" id="scheduleSection">
     <div class="activity-card">
@@ -336,12 +320,16 @@
         <div class="activity-title"><b>日程</b><span class="meta" id="scheduleMeta">今天 3 场</span></div>
         <div class="activity-status" id="scheduleStatus">Q4 产品评审 · 9:30 · 5 分钟后</div>
       </div>
-    </div>
-    <div class="ledger" id="scheduleLedger" hidden>
-      <svg class="icon"><use href="#i-warn"/></svg>
-      <span>跳过 1 次，中断按钮延迟 5 秒</span>
-    </div>
-  </section>
+    </div>  </section>
+
+  <section class="activity" id="alarmSection">
+    <div class="activity-card">
+      <span class="activity-glyph"><svg class="icon"><use href="#i-clock"/></svg></span>
+      <div class="activity-text">
+        <div class="activity-title"><b>闹钟</b><span class="meta" id="alarmMeta">今天 2 条</span></div>
+        <div class="activity-status" id="alarmStatus">点外卖 · 11:30</div>
+      </div>
+    </div>  </section>
 
   <div class="empty" id="emptyState" hidden>
     <svg class="icon"><use href="#i-moon"/></svg>
@@ -351,12 +339,13 @@
   <footer class="footer">
     <div class="divider"></div>
     <div class="footer-row">
+      <button class="footer-btn"><svg class="icon"><use href="#i-gear"/></svg>设置</button>
+      <span class="spacer"></span>
       <button class="footer-btn" id="pauseBtn">
         <svg class="icon"><use id="pauseIcon" href="#i-moon"/></svg>
         <span id="pauseLabel">免打扰 1 小时</span>
       </button>
       <span class="spacer"></span>
-      <button class="footer-btn"><svg class="icon"><use href="#i-gear"/></svg>设置</button>
       <button class="footer-btn"><svg class="icon"><use href="#i-power"/></svg>退出</button>
     </div>
   </footer>
@@ -367,7 +356,9 @@
   点环记一杯；按住环 2 秒，环从当前进度退到 0 即清空今日进度，中途松手（或移出环外）则恢复。
   三个场景都有自己的名字；水区不写杯数——一次喝多少不等于一只杯子的容量，计量只用 ml。日期只写到明天 / 周X，状态行不再被截断。
   日程行只读：显示下一场日程与订阅状态，不给动作按钮；订阅取数失败时状态行转琥珀，提醒照旧按缓存走。
-  免打扰收进底栏：那是全局动作，原来 36pt 整宽的灰底按钮比真正的主动作还重。
+  日程离得远就只说「N 天后 / N 小时后」，不印几千分钟——数量级换成天，一眼能读。
+  闹钟行只读：今天几条 + 下一条；到点由提醒层接管，不在 popover 里给动作。
+  底栏顺序：设置靠左、免打扰居中、退出靠右。设置和退出原来是贴着的两个整宽项，点快了就误触退出。
 </p>
 
 <script>
@@ -396,17 +387,16 @@
     status: $('#waterStatus'),
     statusIcon: $('#waterStatusIcon'),
     statusText: $('#waterStatusText'),
-    ledger: $('#waterLedger'),
-    ledgerText: $('#waterLedgerText'),
     activity: $('#activitySection'),
-    activityLedger: $('#activityLedger'),
     activityCount: $('#activityCount'),
     activityStatus: $('#activityStatus'),
     activityBtn: $('#activityBtn'),
     schedule: $('#scheduleSection'),
     scheduleMeta: $('#scheduleMeta'),
     scheduleStatus: $('#scheduleStatus'),
-    scheduleLedger: $('#scheduleLedger'),
+    alarm: $('#alarmSection'),
+    alarmMeta: $('#alarmMeta'),
+    alarmStatus: $('#alarmStatus'),
     empty: $('#emptyState'),
     pauseBtn: $('#pauseBtn'),
     pauseIcon: $('#pauseIcon'),
@@ -417,34 +407,33 @@
     consumed: 1000,
     cupML: 250,
     targetML: 2000,
-    skips: 0,
     pausedUntil: 0,
     waterOn: true,
     activityOn: true,
     activityDone: 0,
-    activitySkips: 0,
     scheduleOn: true,
-    scheduleSkips: 0,
     scheduleState: 'next',
+    alarmOn: true,
     clearedUntil: 0
   };
 
   // 日程行的三种状态：下一条事件 / 今天没有日程 / 订阅取数失败
   const SCHEDULE_STATES = {
     next:  { meta: '今天 3 场', status: 'Q4 产品评审 · 5 分钟后', warn: false },
+    later: { meta: '今天 3 场', status: 'AI 质量保障进度同步 · 4 天后', warn: false },
     none:  { meta: '今天 0 场', status: '今天没有日程了', warn: false },
     error: { meta: '2 个地址', status: '认证失败 · 数据可能已过期', warn: true }
   };
 
   const PRESETS = {
-    default:   { consumed: 1000, skips: 0, paused: false, waterOn: true,  activityOn: true,  activityDone: 0, scheduleOn: true,  scheduleSkips: 0, scheduleState: 'next' },
-    done:      { consumed: 2000, skips: 0, paused: false, waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleSkips: 0, scheduleState: 'next' },
-    skip:      { consumed: 1000, skips: 1, paused: false, waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleSkips: 1, scheduleState: 'next' },
-    paused:    { consumed: 1000, skips: 0, paused: true,  waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleSkips: 0, scheduleState: 'next' },
-    wateroff:  { consumed: 1000, skips: 0, paused: false, waterOn: false, activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleSkips: 0, scheduleState: 'next' },
-    alloff:    { consumed: 1000, skips: 0, paused: false, waterOn: false, activityOn: false, activityDone: 2, scheduleOn: false, scheduleSkips: 0, scheduleState: 'next' },
-    schednone: { consumed: 1000, skips: 0, paused: false, waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleSkips: 0, scheduleState: 'none' },
-    schederror:{ consumed: 1000, skips: 0, paused: false, waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleSkips: 0, scheduleState: 'error' }
+    default:   { consumed: 1000, paused: false, waterOn: true,  activityOn: true,  activityDone: 0, scheduleOn: true,  scheduleState: 'next' },
+    done:      { consumed: 2000, paused: false, waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleState: 'next' },
+    paused:    { consumed: 1000, paused: true,  waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleState: 'next' },
+    wateroff:  { consumed: 1000, paused: false, waterOn: false, activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleState: 'next' },
+    alloff:    { consumed: 1000, paused: false, waterOn: false, activityOn: false, activityDone: 2, scheduleOn: false, scheduleState: 'next', alarmOn: false },
+    schednone: { consumed: 1000, paused: false, waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleState: 'none' },
+    schedlater:{ consumed: 1000, paused: false, waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleState: 'later' },
+    schederror:{ consumed: 1000, paused: false, waterOn: true,  activityOn: true,  activityDone: 2, scheduleOn: true,  scheduleState: 'error' }
   };
 
   const isCompleted = () => state.targetML > 0 && state.consumed >= state.targetML;
@@ -488,26 +477,23 @@
     el.statusIcon.setAttribute('href', icon);
     el.status.classList.toggle('is-success', success);
 
-    el.ledger.hidden = !(state.skips > 0 && !isCompleted());
-    el.ledgerText.textContent = state.skips === 1
-      ? '跳过 1 次，中断按钮延迟 5 秒'
-      : `跳过 ${state.skips} 次，中断按钮延迟 10 秒`;
-
     el.water.hidden = !state.waterOn;
     el.activity.hidden = !state.activityOn;
     el.schedule.hidden = !state.scheduleOn;
-    el.empty.hidden = state.waterOn || state.activityOn || state.scheduleOn;
-    el.pauseBtn.hidden = !(state.waterOn || state.activityOn || state.scheduleOn);
+    el.alarm.hidden = !state.alarmOn;
+    el.empty.hidden = state.waterOn || state.activityOn || state.scheduleOn || state.alarmOn;
+    el.pauseBtn.hidden = !(state.waterOn || state.activityOn || state.scheduleOn || state.alarmOn);
 
     el.activityCount.textContent = `今天 ${state.activityDone} 次`;
     el.activityStatus.textContent = isPaused() ? '免打扰中' : '下次 明天 10:30';
-    el.activityLedger.hidden = !(state.activitySkips > 0);
 
     const sch = SCHEDULE_STATES[state.scheduleState];
     el.scheduleMeta.textContent = sch.meta;
     el.scheduleStatus.textContent = isPaused() ? '免打扰中' : sch.status;
     el.scheduleStatus.classList.toggle('is-warn', !isPaused() && sch.warn);
-    el.scheduleLedger.hidden = !(state.scheduleSkips > 0);
+
+    el.alarmMeta.textContent = '今天 2 条';
+    el.alarmStatus.textContent = isPaused() ? '免打扰中' : '点外卖 · 11:30';
 
     el.pauseLabel.textContent = isPaused() ? '恢复提醒' : '免打扰 1 小时';
     el.pauseIcon.setAttribute('href', isPaused() ? '#i-play' : '#i-moon');
@@ -517,7 +503,6 @@
   // ── 记一杯 ──
   function drink() {
     state.consumed = Math.max(0, state.consumed + state.cupML);
-    state.skips = Math.max(0, state.skips - 1);
     state.clearedUntil = 0;
     render();
     el.core.classList.remove('is-bump');
@@ -607,7 +592,6 @@
   });
   el.activityBtn.addEventListener('click', () => {
     state.activityDone += 1;
-    state.activitySkips = Math.max(0, state.activitySkips - 1);
     render();
   });
 
@@ -618,14 +602,13 @@
     cancelHold();
     el.ring.classList.add('no-anim');
     state.consumed = preset.consumed;
-    state.skips = preset.skips;
     state.pausedUntil = preset.paused ? Date.now() + 34 * 60000 : 0;
     state.waterOn = preset.waterOn;
     state.activityOn = preset.activityOn;
     state.activityDone = preset.activityDone;
     state.scheduleOn = preset.scheduleOn;
-    state.scheduleSkips = preset.scheduleSkips;
     state.scheduleState = preset.scheduleState;
+    state.alarmOn = preset.alarmOn ?? true;
     state.clearedUntil = 0;
     render();
     void el.progress.getBoundingClientRect();
