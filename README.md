@@ -16,6 +16,8 @@
 xattr -d com.apple.quarantine "/Applications/Barge In.app"
 ```
 
+想自己构建见下方[构建](#构建)。
+
 ## 为什么做它
 
 > "太温柔了。我知道我要喝水，但我就是停不下来工作。"
@@ -83,6 +85,31 @@ xattr -d com.apple.quarantine "/Applications/Barge In.app"
 
 ![活动场景的全屏提醒](docs/screenshots/overlay-activity.jpg)
 
+## 构建
+
+需要 macOS 14 与 Command Line Tools（不需要完整 Xcode）。
+
+```sh
+git clone https://github.com/qiqiangvae/BargeIn.git
+cd BargeIn
+make app          # 产出 "Barge In.app"（ad-hoc 签名）
+open "Barge In.app"
+```
+
+开发时直接跑：
+
+```sh
+make run          # swift run
+```
+
+自检（不需要 UI）：
+
+```sh
+"./Barge In.app/Contents/MacOS/BargeIn" --selftest
+```
+
+离屏截图（`--snapshot <dir>`）会把 popover、设置和提醒层渲染成 PNG，用于开发期视觉检查；`--demo` 直接看一次提醒长什么样。
+
 ## 设计取舍
 
 - **不劫持系统**：不拦键盘、不改系统音量、不阻止切 App。展示时短暂取得键盘焦点（双击 Esc 可中断），关闭后把前台还给原 App。强度来自预设本身，不来自"这次逃不掉"
@@ -94,7 +121,7 @@ xattr -d com.apple.quarantine "/Applications/Barge In.app"
 - **场景对通用时间只有两种待遇**：喝水、活动、闹钟受工作时段与休息日约束，日程因为事件自带时间而豁免。不按场景各写一套规则
 - **闹钟只管近处的时刻**：一次性只收未来 7 天，更远的事进日历，由日程场景照样打断你——这是闹钟不变成待办的第一道闸
 - **日程只读**：Barge In 不排期、不改事件。它只回答"现在该停下了吗"，不回答"接下来该做什么"
-- **核心暂不公开 + 免费**：App 与文档走公开仓库，核心代码暂不公开，计划稳定后开源；当前不收费、不做付费预设
+- **开源 + 免费**：MIT，源码、文档与下载在同一个仓库；当前不收费、不做付费预设（见 [ADR-0005](docs/adr/0005-open-source.md)）
 
 ## 文档
 
@@ -103,8 +130,8 @@ xattr -d com.apple.quarantine "/Applications/Barge In.app"
 - [技术方案](docs/design.md)
 - [竞品与市场调研](docs/competitor-scan.md)
 - [术语表](GLOSSARY.md)
-- 决策记录：[ADR-0001 日程订阅是唯一的联网功能](docs/adr/0001-network-for-calendar-subscriptions.md) · [ADR-0002 闹钟与日程是两个场景](docs/adr/0002-alarms-vs-calendar.md) · [ADR-0003 不做自动升级](docs/adr/0003-no-automatic-escalation.md) · [ADR-0004 发布模型](docs/adr/0004-release-model-private-core.md)
+- 决策记录：[ADR-0001 日程订阅是唯一的联网功能](docs/adr/0001-network-for-calendar-subscriptions.md) · [ADR-0002 闹钟与日程是两个场景](docs/adr/0002-alarms-vs-calendar.md) · [ADR-0003 不做自动升级](docs/adr/0003-no-automatic-escalation.md) · [ADR-0004 私有核心（已被取代）](docs/adr/0004-release-model-private-core.md) · [ADR-0005 开源](docs/adr/0005-open-source.md)
 
 ## License
 
-仓库里的文档与官网内容采用 MIT，见 [LICENSE](LICENSE)。App 核心代码暂不公开，计划在稳定后开源，见 [ADR-0004](docs/adr/0004-release-model-private-core.md)。
+MIT，见 [LICENSE](LICENSE)。
