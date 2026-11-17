@@ -69,7 +69,7 @@ final class StatusItemController: NSObject {
         }
         if CommandLine.arguments.contains("--demo-update") {
             // 开发期看更新卡长什么样：不检查、不发通告，点卡片照常落设置·通用。
-            updateNotice.show(version: "0.5.0", current: updates.currentVersion ?? "0.4.5") { [weak self] in
+            updateNotice.show(version: "0.5.0", current: updates.currentVersion ?? "0.4.6") { [weak self] in
                 self?.showSettings(page: .app)
             }
         }
