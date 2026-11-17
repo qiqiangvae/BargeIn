@@ -159,8 +159,10 @@ struct QuietButton: View {
 // MARK: - 设置控件
 
 /// 分段选择：选中块自己滑动，不依赖 SwiftUI 的分段控件默认皮肤。
+/// `icons` 与 `labels` 一一对应；不传就只有文字（节奏、强度那些分段不需要图标）。
 struct SegmentedControl: View {
     let labels: [String]
+    var icons: [String] = []
     let selected: Int
     let onSelect: (Int) -> Void
 
@@ -182,11 +184,21 @@ struct SegmentedControl: View {
                         Button {
                             onSelect(index)
                         } label: {
-                            Text(labels[index])
-                                .font(.system(size: 12.5, weight: selected == index ? .semibold : .regular))
-                                .foregroundStyle(selected == index ? .primary : .secondary)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .contentShape(Rectangle())
+                            HStack(spacing: 5) {
+                                if let icon = icon(at: index) {
+                                    Image(systemName: icon)
+                                        .font(.system(
+                                            size: 11.5,
+                                            weight: selected == index ? .semibold : .regular
+                                        ))
+                                        .accessibilityHidden(true)
+                                }
+                                Text(labels[index])
+                                    .font(.system(size: 12.5, weight: selected == index ? .semibold : .regular))
+                            }
+                            .foregroundStyle(selected == index ? .primary : .secondary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(selected == index ? .isSelected : AccessibilityTraits())
@@ -196,6 +208,11 @@ struct SegmentedControl: View {
             .animation(Motion.enter, value: selected)
         }
         .frame(height: 32)
+    }
+
+    private func icon(at index: Int) -> String? {
+        guard icons.indices.contains(index), !icons[index].isEmpty else { return nil }
+        return icons[index]
     }
 }
 

@@ -1,6 +1,27 @@
 import SwiftUI
 import BargeInCore
 
+/// 预设网格的尺寸口径。网格最多两行，超出的在卡片里纵向滚动；
+/// 卡头的「共 N 套」也用它，两个地方不能各写一个阈值。
+enum PresetGridLayout {
+    static let columns = 3
+    static let visibleRows = 2
+    /// 卡片定高：66 的微缩图 + 单行名称与描述 + 8pt 内边距。
+    /// 限高滚动要靠它算出两行的准确高度，不能量一次留一次余量。
+    static let cardHeight: CGFloat = 126
+    static let gap: CGFloat = 10
+
+    static var limit: Int { columns * visibleRows }
+    static var cappedHeight: CGFloat {
+        CGFloat(visibleRows) * cardHeight + CGFloat(visibleRows - 1) * gap
+    }
+
+    /// 「共 9 套」只在一屏放不下时出现，默认三套不写。
+    static func overflowNote(_ count: Int) -> String? {
+        count > limit ? "共 \(count) 套" : nil
+    }
+}
+
 /// 预设卡网格：设置页与全部预设共用一套卡。卡片只负责"被选中"，
 /// 编辑 / 预览 / 复制 / 删除收在下方一行，只作用于当前使用中的那张。
 struct PresetGrid<Editor: View>: View {
@@ -17,34 +38,71 @@ struct PresetGrid<Editor: View>: View {
     let onDelete: (PresetInstance) -> Void
     let editor: (PresetInstance) -> Editor
 
-    private static var columns: Int { 3 }
-
     private var active: PresetInstance { store.activeInstance(for: scene) }
     private var editing: PresetInstance? { instances.first { $0.id == editingID } }
     private var descriptor: SceneDescriptor { store.descriptor(scene) }
+    private var capped: Bool { instances.count > PresetGridLayout.limit }
+
+    /// 滚动到底用的锚点：复制出来的卡排在最后，网格滚到它才算给了反馈。
+    private static var endAnchor: String { "preset-grid-end" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: Self.columns),
-                alignment: .leading,
-                spacing: 10
-            ) {
-                ForEach(instances) { instance in
-                    PresetCard(
-                        instance: instance,
-                        descriptor: descriptor,
-                        active: instance.id == active.id
-                    ) {
-                        onSelect(instance)
+            if capped {
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical) {
+                        VStack(spacing: 0) {
+                            grid
+                            Color.clear.frame(height: 1).id(Self.endAnchor)
+                        }
+                    }
+                    .frame(height: PresetGridLayout.cappedHeight)
+                    // 第 7 张把网格顶成限高状态：这棵子树是随这次复制才出现的，
+                    // onChange 看不到「变多」，所以 onAppear 也要接一次。
+                    .onAppear { revealPendingCopy(proxy) }
+                    .onChange(of: instances.count) { old, new in
+                        guard new > old else { return }
+                        revealPendingCopy(proxy)
                     }
                 }
+            } else {
+                grid
             }
 
             if showsActions {
                 actionBar
                 if let editing {
                     editor(editing)
+                }
+            }
+        }
+    }
+
+    /// 复制出来的卡排在最后，限高后它落在屏外：滚到底把它露出来，
+    /// 不然点了「复制」界面看着没反应。新卡这一轮才进布局，等它落位再滚。
+    private func revealPendingCopy(_ proxy: ScrollViewProxy) {
+        guard model.pendingPresetReveal else { return }
+        model.pendingPresetReveal = false
+        DispatchQueue.main.async {
+            withAnimation(.easeOut(duration: 0.25)) {
+                proxy.scrollTo(Self.endAnchor, anchor: .bottom)
+            }
+        }
+    }
+
+    private var grid: some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: PresetGridLayout.gap), count: PresetGridLayout.columns),
+            alignment: .leading,
+            spacing: PresetGridLayout.gap
+        ) {
+            ForEach(instances) { instance in
+                PresetCard(
+                    instance: instance,
+                    descriptor: descriptor,
+                    active: instance.id == active.id
+                ) {
+                    onSelect(instance)
                 }
             }
         }
@@ -98,6 +156,7 @@ struct PresetCard: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: PresetGridLayout.cardHeight, alignment: .topLeading)
         .cardChrome(
             radius: 11,
             fill: active ? Theme.accent.opacity(0.09) : Color.primary.opacity(0.03),

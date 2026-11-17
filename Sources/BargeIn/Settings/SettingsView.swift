@@ -61,6 +61,9 @@ final class SettingsModel {
     /// 哪个删除入口在等第二下确认。同一时刻只有一个，切页、切场景或点别的入口即复位。
     var confirmingDelete: String?
 
+    /// 刚复制出来的预设要滚到眼前：它排在网格最后，限高两行时落在屏外。
+    var pendingPresetReveal = false
+
     /// 正在内联编辑的闹钟（同时只展开一条）与它的内容草稿。
     var editingAlarmID: UUID?
     var alarmTitleDraft = ""
@@ -115,6 +118,7 @@ final class SettingsModel {
         editingID = nil
         editingAlarmID = nil
         confirmingDelete = nil
+        pendingPresetReveal = false
     }
 
     /// 离开场景 tab 同样收起编辑面板。
@@ -128,6 +132,7 @@ final class SettingsModel {
         editingID = nil
         editingAlarmID = nil
         confirmingDelete = nil
+        pendingPresetReveal = false
     }
 
     func beginEditAlarm(_ alarm: Alarm) {
@@ -255,7 +260,7 @@ struct SettingsView: View {
                     timeCard
                     generalCard
                     versionCard
-                    privacyLine
+                    footerNotes
                 }
             }
         }
@@ -267,6 +272,7 @@ struct SettingsView: View {
             Spacer(minLength: 0)
             SegmentedControl(
                 labels: SceneID.allCases.map { store.sceneTitle($0) } + ["通用"],
+                icons: SceneID.allCases.map(tabIcon) + ["gearshape.fill"],
                 selected: model.tabIndex
             ) { index in
                 model.selectTab(index)
@@ -278,12 +284,28 @@ struct SettingsView: View {
         .padding(.bottom, 8)
     }
 
-    private var privacyLine: some View {
-        Text("零权限 · 数据只保存在本机；日程订阅与更新检查是仅有的联网功能，都只读，更新检查可关闭")
-            .font(.system(size: 10.5))
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity)
-            .padding(.top, 2)
+    /// tab 上还是每个场景自己那套符号（和 popover 同一套），但一律用实心：
+    /// 走路人只有实心版，水滴也是实心，描边的闹钟和齿轮混在一排里会轻重不一。
+    private func tabIcon(_ scene: SceneID) -> String {
+        switch scene {
+        case .water: "drop.fill"
+        case .activity: "figure.walk"
+        case .schedule: "calendar"
+        case .alarm: "alarm.fill"
+        }
+    }
+
+    private var footerNotes: some View {
+        VStack(spacing: 5) {
+            Text("零权限 · 数据只保存在本机；日程订阅与更新检查是仅有的联网功能，都只读，更新检查可关闭")
+            Text("作者 qiqiang · [GitHub](https://github.com/qiqiangvae) · [官网](https://barge-in.qiqiang.online) · MIT 许可")
+        }
+        .font(.system(size: 10.5))
+        .foregroundStyle(.secondary)
+        .tint(Theme.accentText)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 2)
     }
 
     // MARK: - 当前场景
@@ -335,13 +357,17 @@ struct SettingsView: View {
 
     private func presetsCard(showsActions: Bool) -> some View {
         let scene = model.selectedScene
-        return SettingsCard(title: "提醒预设") {
+        let instances = store.config(scene).instances
+        return SettingsCard(
+            title: "提醒预设",
+            footnote: PresetGridLayout.overflowNote(instances.count)
+        ) {
             VStack(alignment: .leading, spacing: 12) {
                 PresetGrid(
                     store: store,
                     model: model,
                     scene: scene,
-                    instances: store.config(scene).instances,
+                    instances: instances,
                     showsActions: showsActions,
                     editingID: showsActions ? model.editingID : nil,
                     onSelect: select,
@@ -376,8 +402,9 @@ struct SettingsView: View {
 
     private func copy(_ instance: PresetInstance) {
         model.confirmingDelete = nil
-        store.duplicate(instance.id, in: model.selectedScene)
         model.editingID = nil
+        guard store.duplicate(instance.id, in: model.selectedScene) != nil else { return }
+        model.pendingPresetReveal = true
     }
 
     private func delete(_ instance: PresetInstance) {
