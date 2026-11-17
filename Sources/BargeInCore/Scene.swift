@@ -53,19 +53,24 @@ public struct SceneConfig: Codable, Equatable, Sendable {
     public var instances: [PresetInstance]
     public var activeInstanceID: UUID
     public var skipsToday: Int
+    /// 节奏的另一边：切走时把原来那套存在这里，切回来原样还原。
+    /// 只有「固定间隔 / 指定时刻」二选一的场景会用到。
+    public var parkedRhythm: Schedule?
 
     public init(
         isEnabled: Bool,
         trigger: SceneTrigger,
         instances: [PresetInstance],
         activeInstanceID: UUID,
-        skipsToday: Int = 0
+        skipsToday: Int = 0,
+        parkedRhythm: Schedule? = nil
     ) {
         self.isEnabled = isEnabled
         self.trigger = trigger
         self.instances = instances
         self.activeInstanceID = activeInstanceID
         self.skipsToday = skipsToday
+        self.parkedRhythm = parkedRhythm
     }
 
     /// 逐字段容错：`trigger` 是场景身份，读不出来交给上层整块回该场景出厂配置；
@@ -77,6 +82,22 @@ public struct SceneConfig: Codable, Equatable, Sendable {
         instances = container.tolerantArray(PresetInstance.self, forKey: .instances)
         activeInstanceID = container.tolerant(UUID.self, forKey: .activeInstanceID, or: UUID())
         skipsToday = container.tolerant(Int.self, forKey: .skipsToday, or: 0)
+        parkedRhythm = container.tolerantOptional(Schedule.self, forKey: .parkedRhythm)
+    }
+
+    /// 固定间隔 / 指定时刻二选一：只换用哪一套，另一套留着，切回来原样还原。
+    /// 已经在这一边就什么都不做——分段控件点当前项也会回调。
+    public mutating func useRhythm(timesOfDay: Bool) {
+        guard let current = trigger.rhythm, current.isTimesOfDay != timesOfDay else { return }
+        // 存的不是要切过去的那一边（换过类的旧值）就当没存过，别把两种节奏搅在一起。
+        let remembered = parkedRhythm.flatMap { $0.isTimesOfDay == timesOfDay ? $0 : nil }
+        parkedRhythm = current
+        trigger = .rhythm(
+            remembered
+                ?? (timesOfDay
+                    ? .timesOfDay(Schedule.defaultTimesOfDay)
+                    : .interval(minutes: Schedule.defaultIntervalMinutes))
+        )
     }
 
     /// 出厂配置：卡片由预设目录提供，这里只负责装进一个场景。

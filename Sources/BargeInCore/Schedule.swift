@@ -6,6 +6,14 @@ public enum Schedule: Codable, Equatable, Sendable {
     case timesOfDay([TimeOfDay])
 
     public static let minimumIntervalMinutes = 5
+    /// 另一套节奏从没设过时，切过去先给的起点。
+    public static let defaultIntervalMinutes = 60
+    public static let defaultTimesOfDay = [TimeOfDay(hour: 10, minute: 0)]
+
+    public var isTimesOfDay: Bool {
+        if case .timesOfDay = self { return true }
+        return false
+    }
 
     public func fireTimes(
         on day: Date,

@@ -43,6 +43,11 @@ final class StateStore {
         updateScene(scene) { $0.trigger = trigger }
     }
 
+    /// 固定间隔 / 指定时刻二选一：只换用哪一套，不丢另一套的设置。
+    func setRhythmMode(timesOfDay: Bool, for scene: SceneID) {
+        updateScene(scene) { $0.useRhythm(timesOfDay: timesOfDay) }
+    }
+
     /// 前置只有一个真相：日程场景自己的 trigger。
     var leadMinutes: Int { trigger(for: .schedule).leadMinutes ?? 5 }
 

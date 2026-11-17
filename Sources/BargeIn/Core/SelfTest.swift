@@ -16,6 +16,7 @@ enum SelfTest {
 
         persistence(check)
         factory(check)
+        rhythmSwitch(check)
         scheduling(check)
         behavior(check)
         instances(check)
@@ -155,6 +156,50 @@ enum SelfTest {
         )
         check("喝水配额默认 2000 / 250", state.water.targetML == 2000 && state.water.cupML == 250)
         check("活动从 0 次开始", state.activity.doneToday == 0)
+    }
+
+    // MARK: - 节奏二选一
+
+    /// 设置里「固定间隔 / 指定时刻」切换：两套设置各留一份，切走再切回不该被重置。
+    private static func rhythmSwitch(_ check: (String, Bool) -> Void) {
+        let suiteName = "com.bargein.selftest.rhythm"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            check("节奏 selftest suite available", false)
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let store = StateStore(defaults: defaults)
+        store.setTrigger(.rhythm(.interval(minutes: 30)), for: .water)
+        store.setRhythmMode(timesOfDay: true, for: .water)
+        check(
+            "切到指定时刻给一个起点",
+            store.trigger(for: .water).rhythm == .timesOfDay([TimeOfDay(hour: 10, minute: 0)])
+        )
+        store.setRhythmMode(timesOfDay: false, for: .water)
+        check("切回固定间隔不重置间隔", store.trigger(for: .water).rhythm == .interval(minutes: 30))
+
+        let times = [TimeOfDay(hour: 9, minute: 30), TimeOfDay(hour: 15, minute: 0)]
+        store.setTrigger(.rhythm(.timesOfDay(times)), for: .activity)
+        store.setRhythmMode(timesOfDay: false, for: .activity)
+        store.setRhythmMode(timesOfDay: true, for: .activity)
+        check("切回指定时刻不丢掉时刻", store.trigger(for: .activity).rhythm == .timesOfDay(times))
+
+        store.setRhythmMode(timesOfDay: true, for: .activity)
+        check("点当前那一边不动设置", store.trigger(for: .activity).rhythm == .timesOfDay(times))
+
+        let edited = [TimeOfDay(hour: 9, minute: 0), TimeOfDay(hour: 16, minute: 0)]
+        store.setRhythmMode(timesOfDay: true, for: .water)
+        store.setTrigger(.rhythm(.timesOfDay(edited)), for: .water)
+        store.setRhythmMode(timesOfDay: false, for: .water)
+
+        let reloaded = StateStore(defaults: defaults)
+        reloaded.setRhythmMode(timesOfDay: true, for: .water)
+        check("切走的那一套跟着落盘", reloaded.trigger(for: .water).rhythm == .timesOfDay(edited))
+        reloaded.setRhythmMode(timesOfDay: false, for: .water)
+        check("重启后切回来还是原来那个间隔", reloaded.trigger(for: .water).rhythm == .interval(minutes: 30))
+
+        defaults.removePersistentDomain(forName: suiteName)
     }
 
     // MARK: - 调度
