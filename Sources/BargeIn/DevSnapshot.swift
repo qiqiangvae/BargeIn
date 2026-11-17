@@ -106,7 +106,8 @@ enum DevSnapshot {
         editingModel.renameDraft = store.config(.water).instances.first { $0.id == renameTarget }?.name ?? ""
         renderSettings(editingModel, "settings-editing.png")
 
-        // 多张卡：所有卡都排在首页网格里，不再有「全部预设」二级页。
+        // 多张卡：网格两行封顶，第 7 张起在这块里滚动，卡头写「共 N 套」。
+        store.duplicate(store.activeInstance(for: .water).id, in: .water)
         store.duplicate(store.activeInstance(for: .water).id, in: .water)
         store.duplicate(store.activeInstance(for: .water).id, in: .water)
         renderSettings(SettingsModel(store: store, onboarding: false), "settings-many-cards.png")

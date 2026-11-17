@@ -76,8 +76,9 @@
 
   /* 顶部：tab + 场景开关 */
   .tabbar{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:14px 20px 8px}
-  .tabs{width:400px;height:32px}
-  .tabs button{font-size:12.5px}
+  .seg.tabs{width:400px;height:32px}
+  .seg.tabs button{font-size:12.5px;display:inline-flex;align-items:center;justify-content:center;gap:5px}
+  .seg.tabs button svg{width:13px;height:13px;flex:0 0 13px;color:currentColor}
   .tabs button[aria-selected="true"]{background:var(--segment);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.10)}
   .scene-switch{display:flex;align-items:center;gap:8px;margin-left:auto}
   .scene-switch .label{font-size:11px;color:var(--ink2)}
@@ -106,7 +107,10 @@
   .head-right{display:flex;align-items:center;gap:10px}
 
   /* ── 预设卡：微缩的呈现，不是图标 + 一句话 ── */
-  .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  /* 两行封顶：再多就在这块里纵向滚动。macOS 默认不常驻滚动条，
+     所以溢出的提示靠卡头右侧的「共 N 套」写出来，不靠滚动条。 */
+  .presets{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-height:267px;
+    overflow-y:auto;overscroll-behavior:contain}
   .preset{display:flex;flex-direction:column;gap:7px;padding:8px;border-radius:11px;cursor:pointer;
     background:var(--fill-weak);border:1px solid var(--stroke);position:relative;
     transition:background .15s ease,border-color .15s ease}
@@ -368,6 +372,10 @@
   .hint{font-size:11px;line-height:1.5;color:var(--ink3);margin:0}
 
   .privacy{font-size:11px;color:var(--ink3);text-align:center;padding-top:2px;margin:0}
+  .foot-notes{display:flex;flex-direction:column;gap:4px}
+  .colophon{font-size:11px;color:var(--ink3);text-align:center;margin:0}
+  .colophon a{color:var(--accent-text);text-decoration:none}
+  .colophon a:hover{text-decoration:underline}
   .proto-note{width:640px;max-width:100%;margin:2px 0 0;font-size:11px;line-height:1.75;color:var(--ink2);text-align:left}
 
   /* 底栏 */
@@ -413,11 +421,26 @@
 
   <div class="tabbar">
     <div class="seg tabs" role="tablist" aria-label="设置分区">
-      <button role="tab" data-tab="water" aria-selected="true">喝水</button>
-      <button role="tab" data-tab="activity" aria-selected="false">活动</button>
-      <button role="tab" data-tab="schedule" aria-selected="false">日程</button>
-      <button role="tab" data-tab="alarm" aria-selected="false">闹钟</button>
-      <button role="tab" data-tab="app" aria-selected="false">通用</button>
+      <button role="tab" data-tab="water" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.4c3.1 3.8 5.9 7 5.9 9.9a5.9 5.9 0 0 1-11.8 0c0-2.9 2.8-6.1 5.9-9.9Z"/></svg>
+        喝水
+      </button>
+      <button role="tab" data-tab="activity" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12.7" cy="4.6" r="1.6" fill="currentColor" stroke="none"/><path d="M12.3 8.1 11.9 12.6l1.5 2.6-.4 3.6M11.9 12.6l-1.9 2.7-1.8 1.7M12.3 8.1l2.2 3 1.7 1.3"/></svg>
+        活动
+      </button>
+      <button role="tab" data-tab="schedule" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.6" y="5" width="16.8" height="15" rx="2.8"/><path d="M3.6 9.6h16.8M8.2 3.4v3.2M15.8 3.4v3.2"/></svg>
+        日程
+      </button>
+      <button role="tab" data-tab="alarm" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13.1" r="6.4"/><path d="M12 9.8v3.3l2.3 1.5M7.4 19.4 5.8 21.2M16.6 19.4l1.6 1.8M4.6 4.6 7.3 6.2M19.4 4.6l-2.7 1.6"/></svg>
+        闹钟
+      </button>
+      <button role="tab" data-tab="app" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 3h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V19a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V5a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        通用
+      </button>
     </div>
   </div>
 
@@ -434,7 +457,7 @@
         </div>
 
         <section class="card" data-preset-card>
-          <div class="card-head"><h2>提醒预设</h2></div>
+          <div class="card-head"><h2>提醒预设</h2><span class="foot" data-preset-count></span></div>
           <div class="presets" data-presets></div>
           <div class="preset-actions" data-actions>
             <button class="act" data-act="edit">
@@ -854,7 +877,10 @@
           <p class="note" data-version-note>更新包从 GitHub Releases 下载；装完 App 自动重启。</p>
         </section>
 
-        <p class="privacy">零权限 · 数据只保存在本机；日程订阅与更新检查是仅有的联网功能，都只读，更新检查可关闭</p>
+        <div class="foot-notes">
+          <p class="privacy">零权限 · 数据只保存在本机；日程订阅与更新检查是仅有的联网功能，都只读，更新检查可关闭</p>
+          <p class="colophon">作者 qiqiang · <a href="https://github.com/qiqiangvae" target="_blank" rel="noreferrer">GitHub</a> · <a href="https://barge-in.qiqiang.online" target="_blank" rel="noreferrer">官网</a> · MIT 许可</p>
+        </div>
       </div>
     </section>
 
@@ -886,10 +912,11 @@
 <p class="proto-note">
   这一版动了六处结构：① 第四个 tab 从「设置」改名「通用」，场景与 App 级设置不再同名；② 每个场景页顶部只留一句说明 + 启用开关，场景名只在 tab 上出现一次；
   ③ 预设卡换成真实呈现的微缩图（大字墙的重复大字、温柔的右上卡片、碎裂的裂纹），替掉「图标 + 一句话」；④ 编辑 / 预览 / 复制 / 删除收到选中卡下方的一行动作，删掉每张卡上三个图标按钮；
-  ⑤ 取消「全部预设」二级页，所有卡就在首页网格里往下排，复制出来的卡当场看得见；⑥ 窗口宽高都固定：切 tab 只换内容、不换窗口高度（高度随内容重算时，切一次 tab 窗口要缩两下、界面跟着抖），内容超出就在窗内滚动，比默认页矮的 tab 底部留白。
+  ⑤ 取消「全部预设」二级页，所有卡都在首页网格里，网格最多两行、多出来的在这块里纵向滚动；⑥ 窗口宽高都固定：切 tab 只换内容、不换窗口高度（高度随内容重算时，切一次 tab 窗口要缩两下、界面跟着抖），内容超出就在窗内滚动，比默认页矮的 tab 底部留白。
   细节：删除入口一律先安静再危险（第一下变「确认删除」），指定时刻收成一个列表（时间在左、删除在右、行间有分隔线），不再每行一个红底垃圾桶、左右两截；输入框只有一种皮肤；字号收成 11 / 12 / 13 三档。预设卡下不再有「跳过 N 次」的升级说明：强度是预设自带的，界面不展示跳过次数。
   这一版另改三处：动作按钮从「编辑文案」改成「编辑」（它改名称、强度与文案，不只文案）；碎裂不再暴露裂纹参数，花纹每次提醒重新生成；时间弹层里的分钟从 12 个格子改成一条滑条，时仍是网格。
   更新这一版：通用 tab 加「自动检查更新」开关与「版本」卡。检查更新没有单独页面——静默检查、有新版本时的温柔通知卡见 <a href="update.html">update.html</a>；版本卡承载检查 / 可更新 / 下载 / 安装 / 失败这五种状态，主按钮只在这张卡里换形态。有新版时版本卡写出「这次更新了什么」（发布说明里的第一个小标题）并给「发布说明」入口；通知卡只说这是 Barge In 的更新，不堆正文。联网口径随之改为「日程订阅 + 更新检查，都只读，更新检查可关闭」。
+  更新这一版：① 五个主 tab 各加一个图标，直接用场景自己的符号（水滴 / 走路 / 日历 / 闹钟），通用是齿轮，与 popover 里每个场景的图标同一套（原型里画成线稿；实现用 SF Symbols，走路人只有实心版，所以五个图标统一取实心字形，一排里不混笔重）；② 提醒预设两行封顶，第 7 张起在网格里纵向滚动，卡头右侧写「共 N 套」，节奏 / 订阅 / 闹钟不再被预设挤到屏外。选纵向不选横向：预设是并排比较的东西，横向会把卡藏到鼠标够不着的手势后面（普通滚轮不横滚），纵向和页面滚动同向、手势一致；macOS 滚动条默认随滚动出现，溢出提示不能只靠它，所以用套数写出来。复制出来的卡排到最后，网格会滚到底把它露出来，否则点了「复制」界面看着没反应；③ 通用页底部加一行作者信息「作者 qiqiang · GitHub · 官网 · MIT 许可」——不单独占一张卡，免得把上面那行隐私口径挤到折叠线以下。
 </p>
 
 <script>
@@ -1059,6 +1086,12 @@
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); }
       });
     });
+
+    // 两行封顶：多出来的在网格自己里滚。macOS 默认不常驻滚动条，
+    // 所以「还有几张」由卡头右侧的套数写出来，不靠滚动条。
+    const capped = grid.scrollHeight > grid.clientHeight + 1;
+    const count = p.querySelector('[data-preset-count]');
+    if (count) count.textContent = capped ? `共 ${list.length} 套` : '';
 
     // 动作只作用于当前这张卡；内置预设不给删除
     p.querySelector('.act.danger').hidden = !list[selIndex()]?.copy;
