@@ -69,7 +69,7 @@ final class StatusItemController: NSObject {
         }
         if CommandLine.arguments.contains("--demo-update") {
             // 开发期看更新卡长什么样：不检查、不发通告，点卡片照常落设置·通用。
-            updateNotice.show(version: "0.5.0", current: updates.currentVersion ?? "0.4.4") { [weak self] in
+            updateNotice.show(version: "0.5.0", current: updates.currentVersion ?? "0.4.5") { [weak self] in
                 self?.showSettings(page: .app)
             }
         }
@@ -106,13 +106,16 @@ final class StatusItemController: NSObject {
         advance()
     }
 
+    /// 中断是逃生口：只要提醒层在，双击 Esc / × 必须能关掉它。
+    /// currentKey 万一缺失（状态错位），也照样关窗；这一次只是不记账。
     private func interruptCurrent() {
-        guard let key = currentKey else { return }
-        store.recordSkip(key.scene)
-        if key.scene == .alarm {
-            if let event = key.event { store.finishAlarm(event) }
-        } else if let event = key.event {
-            store.markHandled(event)
+        if let key = currentKey {
+            store.recordSkip(key.scene)
+            if key.scene == .alarm {
+                if let event = key.event { store.finishAlarm(event) }
+            } else if let event = key.event {
+                store.markHandled(event)
+            }
         }
         advance()
     }
