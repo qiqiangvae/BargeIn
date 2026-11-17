@@ -449,11 +449,8 @@ struct SettingsView: View {
     private var rhythmCard: some View {
         SettingsCard(title: "节奏") {
             SegmentedControl(labels: ["固定间隔", "指定时刻"], selected: isFixedTimes ? 1 : 0) { index in
-                if index == 1 {
-                    setSchedule(.timesOfDay(fixedTimes.isEmpty ? [TimeOfDay(hour: 10, minute: 0)] : fixedTimes))
-                } else {
-                    setSchedule(.interval(minutes: 60))
-                }
+                store.setRhythmMode(timesOfDay: index == 1, for: model.selectedScene)
+                engine.reschedule()
             }
 
             if isFixedTimes {
@@ -811,10 +808,7 @@ struct SettingsView: View {
 
     private var rhythm: Schedule? { currentConfig.trigger.rhythm }
 
-    private var isFixedTimes: Bool {
-        guard let rhythm, case .timesOfDay = rhythm else { return false }
-        return true
-    }
+    private var isFixedTimes: Bool { rhythm?.isTimesOfDay == true }
 
     private var fixedTimes: [TimeOfDay] {
         guard let rhythm, case .timesOfDay(let times) = rhythm else { return [] }
@@ -822,7 +816,7 @@ struct SettingsView: View {
     }
 
     private var intervalMinutes: Int {
-        guard let rhythm, case .interval(let minutes) = rhythm else { return 60 }
+        guard let rhythm, case .interval(let minutes) = rhythm else { return Schedule.defaultIntervalMinutes }
         return minutes
     }
 
