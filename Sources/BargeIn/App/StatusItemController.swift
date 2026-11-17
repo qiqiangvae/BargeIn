@@ -120,8 +120,11 @@ final class StatusItemController: NSObject {
     /// 关掉当前这一条，队列里还有就立刻呈现下一条；最后一条才把前台还回去。
     private func advance() {
         let hasPending = engine.pendingCount > 0
-        presenter.dismiss(reactivate: !hasPending)
+        // dismiss 对没有退场动画的预设（温柔、大字墙，以及开了降低动态的碎裂）是同步的：
+        // 它会立刻走 onDismissed → presentNext，把队列里的下一条弹出来并重新设置 currentKey。
+        // 晚一步清就会把新的 currentKey 抹成 nil，新提醒的所有动作都变成空操作。
         currentKey = nil
+        presenter.dismiss(reactivate: !hasPending)
         engine.reschedule()
         presentNext()
     }
