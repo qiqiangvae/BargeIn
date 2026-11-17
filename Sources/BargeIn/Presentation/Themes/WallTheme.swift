@@ -2,6 +2,7 @@ import SwiftUI
 import BargeInCore
 
 /// 大字墙：满屏重复大字 + 渐强音。三种预设里唯一靠"信息轰炸"打断的。
+/// 每次呈现换一套排布（字号、角度、偏移、错位都换），靠 `layoutSeed` 散列出来。
 struct WallTheme: PresetTheme {
     let preset = Preset.wall
     let title = "大字墙"
@@ -109,7 +110,7 @@ struct WallTheme: PresetTheme {
                 ForEach(0..<rowCount, id: \.self) { row in
                     HStack(spacing: fontSize * 0.22) {
                         ForEach(0..<columnCount, id: \.self) { column in
-                            let seed = seed(row: row, column: column)
+                            let seed = Self.cellSeed(salt: context.layoutSeed, row: row, column: column)
                             let flash = animating ? flashLevel(time: time, seed: seed) : 0
                             Text(context.model.copy.word)
                                 .font(.system(
@@ -131,7 +132,7 @@ struct WallTheme: PresetTheme {
                     }
                     // 固定行高：大字直接压到相邻行上，密度不因字号变化而变稀。
                     .frame(width: geo.size.width, height: fontSize * 1.05)
-                    .offset(x: rowShift(row, fontSize: fontSize))
+                    .offset(x: rowShift(row, salt: context.layoutSeed, fontSize: fontSize))
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height)
@@ -148,8 +149,15 @@ struct WallTheme: PresetTheme {
         return pow(max(0, wave), 6)
     }
 
-    private func seed(row: Int, column: Int) -> Int {
-        (row * 37 + column * 19) % 13
+    /// 格子号码：0..<13，决定这个格子的字号、角度、偏移、颜色与底透明度。
+    /// `salt` 每次呈现换一份，整面墙就换一套排布；同一份 salt 下坐标恒定，呈现期间不抖。
+    static func cellSeed(salt: UInt32, row: Int, column: Int) -> Int {
+        var rng = Mulberry32(
+            seed: salt
+                ^ UInt32(truncatingIfNeeded: row) &* 0x9E37_79B1
+                ^ UInt32(truncatingIfNeeded: column) &* 0x85EB_CA6B
+        )
+        return Int(rng.double() * 13)
     }
 
     /// 同一面墙里同时出现约 0.5× 与 2× 的字号，形成大小混排。
@@ -161,8 +169,9 @@ struct WallTheme: PresetTheme {
         [-4, 3, -7, 1, 6, -2, 8, -6, 0, 4, -1, 7, -8][seed]
     }
 
-    private func rowShift(_ row: Int, fontSize: CGFloat) -> CGFloat {
-        [0, -0.9, 0.45, -0.35, 0.75, -0.6][row % 6] * fontSize
+    /// 整行左右错位的偏移量：起点按 salt 挪，每次呈现每行的错位也不一样。
+    private func rowShift(_ row: Int, salt: UInt32, fontSize: CGFloat) -> CGFloat {
+        [0, -0.9, 0.45, -0.35, 0.75, -0.6][(row &+ Int(salt % 6)) % 6] * fontSize
     }
 
     private func wordColor(_ seed: Int) -> Color {

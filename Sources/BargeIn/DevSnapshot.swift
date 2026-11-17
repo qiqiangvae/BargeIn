@@ -269,6 +269,8 @@ enum DevSnapshot {
                 presentation: Catalog.presentation(for: instance),
                 state: state,
                 isPreview: preview,
+                // 截图要能复现：排布固定成同一个种子。
+                layoutSeed: 20261113,
                 onComplete: {}, onPostpone: {}, onInterrupt: {}
             )
             // 全屏层自带深墨底；卡片截图需要一层窗口底色，否则圆角外是透明的。

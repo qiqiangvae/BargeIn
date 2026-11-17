@@ -75,6 +75,8 @@ struct ReminderOverlay: View {
     /// 碎裂这类有自己时间线的预设由 presenter 造好递进来；其他预设为 nil。
     var animator: (any OverlayAnimator)? = nil
     var isPreview: Bool = false
+    /// 每次呈现一份的随机种子；截图这类要复现的场合固定传一个值。
+    var layoutSeed: UInt32 = .random(in: 0..<UInt32.max)
     let onComplete: () -> Void
     let onPostpone: () -> Void
     let onInterrupt: () -> Void
@@ -84,6 +86,7 @@ struct ReminderOverlay: View {
             ThemeContext(
                 model: model,
                 presentation: presentation,
+                layoutSeed: layoutSeed,
                 isPreview: isPreview,
                 secondsLeft: state.secondsLeft,
                 unlocked: state.unlocked,

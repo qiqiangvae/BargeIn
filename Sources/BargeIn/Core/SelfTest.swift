@@ -33,6 +33,7 @@ enum SelfTest {
         escapeLayers(check)
         doubleReturnConfirm(check)
         shatterTimeline(check)
+        wallLayout(check)
 
         if failures.isEmpty {
             print("selftest: PASS")
@@ -1410,5 +1411,23 @@ enum SelfTest {
             Fracture.generate(seed: seed).pieces.filter { $0.shedAt != nil }.count
         }
         check("碎裂: 每次不同的花纹也掉十块", randomShedCounts.allSatisfy { $0 == 10 })
+    }
+
+    // MARK: - 大字墙排布
+
+    /// 排布只由 (salt, row, column) 决定：同一份 salt 固定，换一份 salt 换一套。
+    private static func wallLayout(_ check: (String, Bool) -> Void) {
+        func seeds(_ salt: UInt32) -> [Int] {
+            (0..<4).flatMap { row in
+                (0..<5).map { WallTheme.cellSeed(salt: salt, row: row, column: $0) }
+            }
+        }
+        let fixed = seeds(42)
+        check("大字墙: 同一份 salt 排布固定", seeds(42) == fixed)
+        check("大字墙: 换一份 salt 换一套排布", seeds(43) != fixed)
+        check(
+            "大字墙: 格子号码落在查表范围内",
+            (fixed + seeds(43)).allSatisfy { (0..<13).contains($0) }
+        )
     }
 }
