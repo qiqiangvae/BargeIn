@@ -33,6 +33,9 @@ enum WindowLayout: Equatable {
 struct ThemeContext {
     let model: ReminderModel
     let presentation: Presentation
+    /// 每次呈现新的一份随机种子。需要随机排布的预设（大字墙）靠它把整面墙重新散列，
+    /// 同一次呈现内必须固定，不能逐帧变。
+    let layoutSeed: UInt32
     let isPreview: Bool
     let secondsLeft: Int
     let unlocked: Bool
