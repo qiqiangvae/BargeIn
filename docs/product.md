@@ -1,6 +1,6 @@
 # Barge In 产品文档
 
-- 状态：四场景（App v0.4.4，2026-11-17）
+- 状态：四场景（App v0.4.5，2026-11-17）
 - 更新日期：2026-11-17
 - 相关文档：[技术方案](design.md) · [竞品与市场调研](competitor-scan.md) · [路线图](roadmap.md) · [术语表](../GLOSSARY.md) · [ADR-0001](adr/0001-network-for-calendar-subscriptions.md) · [ADR-0002](adr/0002-alarms-vs-calendar.md) · [ADR-0003](adr/0003-no-automatic-escalation.md) · [ADR-0004](adr/0004-release-model-private-core.md)
 
@@ -337,6 +337,7 @@
 
 ## 修订记录
 
+- 2026-11-17：版本号 0.4.5——中断成为无条件逃生口（双击 Esc / × 不依赖当前提醒的内部状态）；版本行同步
 - 2026-11-17：版本号 0.4.4（修复队列第二条提醒的动作失效）；状态行、版本标记与更新日期同步
 - 2026-11-16：更新检查——通用加自动检查开关与版本卡，通知复用温柔卡，一键下载安装；联网例外从一条变成两条（[ADR-0006](adr/0006-update-check-network.md)）
 - 2026-11-16：开源——源码并入公开仓库（MIT，[ADR-0005](adr/0005-open-source.md)）；发布模型、分发决策与风险表同步改写
