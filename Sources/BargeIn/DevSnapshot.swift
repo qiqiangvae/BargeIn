@@ -19,7 +19,7 @@ enum DevSnapshot {
         let store = StateStore(defaults: defaults)
         let engine = ReminderEngine(store: store, presence: Presence())
         let feeds = FeedService(store: store)
-        let updates = UpdateChecker(store: store, currentVersion: "0.4.6")
+        let updates = UpdateChecker(store: store, currentVersion: "0.4.7")
         store.set(\.water.consumedML, 1000)
         store.set(\.activity.doneToday, 2)
         engine.reschedule()
@@ -125,7 +125,7 @@ enum DevSnapshot {
         let onboardingStore = StateStore(defaults: onboardingDefaults)
         let onboardingEngine = ReminderEngine(store: onboardingStore, presence: Presence())
         let onboardingFeeds = FeedService(store: onboardingStore)
-        let onboardingUpdates = UpdateChecker(store: onboardingStore, currentVersion: "0.4.6")
+        let onboardingUpdates = UpdateChecker(store: onboardingStore, currentVersion: "0.4.7")
         let onboarding = SettingsView(
             store: onboardingStore, engine: onboardingEngine, feeds: onboardingFeeds,
             updates: onboardingUpdates,
