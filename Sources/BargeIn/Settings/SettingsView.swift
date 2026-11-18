@@ -671,7 +671,7 @@ struct SettingsView: View {
 
     private var autoCheckHint: String {
         updates.isSupported
-            ? "启动时与每 24 小时查一次 GitHub；只读，不发送任何数据"
+            ? "启动时与每小时查一次 GitHub；只读，不发送任何数据"
             : "开发构建没有版本号，不检查更新；打包后的 App 才有"
     }
 
