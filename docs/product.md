@@ -1,7 +1,7 @@
 # Barge In 产品文档
 
-- 状态：四场景（App v0.4.9，2026-11-18）
-- 更新日期：2026-11-17
+- 状态：四场景（App v0.4.11，2026-11-18）
+- 更新日期：2026-11-18
 - 相关文档：[技术方案](design.md) · [竞品与市场调研](competitor-scan.md) · [路线图](roadmap.md) · [术语表](../GLOSSARY.md) · [ADR-0001](adr/0001-network-for-calendar-subscriptions.md) · [ADR-0002](adr/0002-alarms-vs-calendar.md) · [ADR-0003](adr/0003-no-automatic-escalation.md) · [ADR-0004](adr/0004-release-model-private-core.md)
 
 ---
@@ -337,6 +337,7 @@
 
 ## 修订记录
 
+- 2026-11-18：更新检查从每 24 小时改为每小时一次；版本号 0.4.11——版本行同步
 - 2026-11-17：版本号 0.4.8——大字墙排布每次呈现重新排布；版本行同步
 - 2026-11-18：强硬档的 5 秒锁定从"只锁中断"改为锁住整块动作区——"喝了"与 × 都要等解锁（Enter 一起挡），双击 Esc 仍是唯一逃生口
 - 2026-11-18：版本号 0.4.9——版本行同步
