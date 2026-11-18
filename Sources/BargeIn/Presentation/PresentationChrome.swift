@@ -36,7 +36,8 @@ enum PresentationChrome {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(!context.interactive)
+            // 锁定期连"喝了"也不响应：强硬档 5 秒内整块动作区都按不动，只留双击 Esc 逃生。
+            .disabled(!context.interactive || !context.unlocked)
             .help("记录这次提醒（1 秒内连按两次 Enter 也可确认）")
 
             if context.presentation.allowsPostpone {
@@ -47,7 +48,7 @@ enum PresentationChrome {
             }
 
             if !context.unlocked {
-                Text("\(context.secondsLeft) 秒后可关闭")
+                Text("\(context.secondsLeft) 秒后可操作")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

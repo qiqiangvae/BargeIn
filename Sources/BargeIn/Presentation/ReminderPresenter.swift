@@ -181,9 +181,10 @@ final class ReminderPresenter {
     }
 
     /// 1 秒内连按两次 Enter = 确认喝了。第一次只记录，单次误触不会记下一杯。
+    /// 锁定期内连 Enter 一起挡掉：按钮按不动，键盘不能成为后门。
     private func returnPressed() {
         if let animator, !animator.isInteractive { return }
-        guard let state = overlayState, state.interactive, state.registerReturn() else { return }
+        guard let state = overlayState, state.interactive, state.unlocked, state.registerReturn() else { return }
         handle { $0.onComplete?() }
     }
 

@@ -306,7 +306,7 @@ struct PresetEditor: View {
                     .frame(width: 180)
                     Spacer(minLength: 0)
                 }
-                Text("强硬不可推迟，中断按钮锁定 5 秒起；标准可以推迟 5 分钟。")
+                Text("强硬不可推迟，按钮锁定 5 秒（双击 Esc 仍可立即中断）；标准可以推迟 5 分钟。")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
             }
