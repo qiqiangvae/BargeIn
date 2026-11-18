@@ -54,6 +54,8 @@ final class SettingsModel {
     var urlDraft = ""
     var isConnecting = false
     var connectError: String?
+    /// 切换凭据存储时没搬完的那一句说明。
+    var credentialError: String?
     var discovered: [CalendarRef] = []
     var selectedCalendars: Set<String> = []
     /// 当前展开「今日列表」的订阅；同时只展开一条。
@@ -630,7 +632,41 @@ struct SettingsView: View {
                 .controlSize(.small)
                 .disabled(!updates.isSupported)
             }
+            SettingsRow(title: "凭据存储", hint: "日程的 CalDAV 密码存哪里") {
+                SegmentedControl(
+                    labels: ["本地文件", "钥匙串"],
+                    selected: store.state.credentialStore == .file ? 0 : 1
+                ) { index in
+                    setCredentialStore(index == 0 ? .file : .keychain)
+                }
+                .frame(width: 150)
+            }
+            Text(credentialNote)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            if let error = model.credentialError {
+                Text(error)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.orange)
+            }
         }
+    }
+
+    /// 切换存储先搬密码：搬不干净就留在原处，模式不切。
+    private func setCredentialStore(_ mode: CredentialStoreMode) {
+        let current = store.state.credentialStore
+        guard mode != current else { return }
+        let ids = store.state.schedule.subscriptions.map(\.id)
+        guard Credentials.move(ids, from: current, to: mode) else {
+            model.credentialError = "有密码没搬过去（钥匙串授权被取消），已留在原处"
+            return
+        }
+        model.credentialError = nil
+        store.set(\.credentialStore, mode)
+    }
+
+    private var credentialNote: String {
+        "本地文件：明文存在 ~/.config/bargein/config.toml（权限 600），换版本不再弹授权。钥匙串：不落明文，但每次更新后可能要再授权一次。切换时已存的密码会被搬过去。"
     }
 
     private var autoCheckHint: String {

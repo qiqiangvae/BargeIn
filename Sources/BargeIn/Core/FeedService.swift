@@ -226,7 +226,7 @@ final class FeedService {
         password: String? = nil,
         window: DateInterval
     ) async throws -> String {
-        let secret = password ?? Keychain.password(for: subscription.id)
+        let secret = password ?? Credentials.secret(for: subscription.id, mode: store.state.credentialStore)
         switch subscription.kind {
         case .ics:
             let request = CalendarProtocol.icsRequest(

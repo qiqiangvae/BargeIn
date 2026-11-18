@@ -29,6 +29,7 @@ enum SelfTest {
         alarms(check)
         legacyData(check)
         updates(check)
+        credentials(check)
         escapeCancel(check)
         escapeLayers(check)
         doubleReturnConfirm(check)
@@ -45,6 +46,49 @@ enum SelfTest {
 
     private static func activePreset(_ config: SceneConfig) -> Preset? {
         config.instances.first { $0.id == config.activeInstanceID }?.preset
+    }
+
+    // MARK: - 凭据文件
+
+    private static func credentials(_ check: (String, Bool) -> Void) {
+        // 密码里的引号、反斜杠、换行、制表符要能原样往返。
+        let map = [
+            "A1": "pa\"ss\\word",
+            "B2": "line1\nline2\tTab",
+            "C3": "中文 · 密码",
+        ]
+        check(
+            "credential file round trip",
+            PasswordFile.parse(PasswordFile.render(map)) == map
+        )
+
+        // 只认 [passwords] 表里的字符串值；别的表、认不出的行都跳过。
+        let handEdited = """
+        # 手写注释
+        [other]
+        "A1" = "ignored"
+        [passwords]
+        "A1" = "kept"
+        not a pair
+        "B2" = 42
+        """
+        check(
+            "credential file scoping",
+            PasswordFile.parse(handEdited) == ["A1": "kept"]
+        )
+
+        // 真文件：原子替换、权限 600、读回一致。用完把这一条删掉。
+        let probe = UUID()
+        let probePassword = "probe-\"quoted\"-\\"
+        let wrote = PasswordFile.set(probePassword, for: probe)
+        let readBack = PasswordFile.password(for: probe)
+        let attributes = try? FileManager.default.attributesOfItem(atPath: PasswordFile.url.path)
+        let permissions = (attributes?[.posixPermissions] as? NSNumber)?.intValue
+        PasswordFile.set(nil, for: probe)
+        check(
+            "credential file write",
+            wrote && readBack == probePassword && permissions == 0o600
+        )
     }
 
     // MARK: - 持久化

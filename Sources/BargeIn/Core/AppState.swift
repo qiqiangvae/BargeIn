@@ -28,6 +28,8 @@ struct AppState: Codable, Equatable {
     var checkForUpdates: Bool = true
     /// 已经用温柔卡通知过的版本。同一个版本只提醒一次。
     var lastNotifiedVersion: String?
+    /// 日程密码存哪里：本地配置文件为默认；钥匙串可选。
+    var credentialStore: CredentialStoreMode = .file
 
     init() {
         water = WaterState()
@@ -92,6 +94,7 @@ extension AppState {
         hasOnboarded = container.tolerant(Bool.self, forKey: .hasOnboarded, or: fallback.hasOnboarded)
         checkForUpdates = container.tolerant(Bool.self, forKey: .checkForUpdates, or: fallback.checkForUpdates)
         lastNotifiedVersion = container.tolerantOptional(String.self, forKey: .lastNotifiedVersion)
+        credentialStore = container.tolerant(CredentialStoreMode.self, forKey: .credentialStore, or: fallback.credentialStore)
 
         // 解码后的收口：空实例列表、丢了的激活项都在这里回出厂；不改动读出来的业务数据。
         waterConfig.normalize(catalog: Catalog.makeInstances(for: .water), defaultActive: Catalog.defaultActive)

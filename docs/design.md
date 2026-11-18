@@ -33,7 +33,7 @@ Barge In 是 macOS 上的反内耗打断工具：常驻菜单栏，在你被手�
 - 日程场景**不受工作时段与休息日约束**（事件自带时间），仍受免打扰。
 - 闹钟场景的触发来源是本机的闹钟列表：每条一个时刻加一句话，重复只有每天（每个非休息日）与仅一次（未来 7 天内）。它与喝水、活动一样受工作时段与休息日约束，冲突的条目是派生的无效状态，不参与调度。
 - 提醒队列的去重键是 `(SceneID, 标识)`：喝水与活动每场景最多一条；日程按事件各一条、闹钟按发生时刻各一条。
-- 日程的只读取数支持两条传输：一条日历地址（ICS，可选 Basic Auth），或一套 CalDAV 凭据（钉钉、企业微信、飞书、iCloud 私有、Nextcloud 等）。密码存 Keychain，每 30 分钟与唤醒时刷新，失败保留缓存并标注过期，不静默丢提醒。
+- 日程的只读取数支持两条传输：一条日历地址（ICS，可选 Basic Auth），或一套 CalDAV 凭据（钉钉、企业微信、飞书、iCloud 私有、Nextcloud 等）。密码默认存本地配置文件（`~/.config/bargein/config.toml`，权限 0600；设置里可切回系统钥匙串），每 30 分钟与唤醒时刷新，失败保留缓存并标注过期，不静默丢提醒。
 - 设置窗口分五个 tab（喝水 / 活动 / 日程 / 闹钟 / 通用）；日程 tab 有「订阅」与「前置」，闹钟 tab 有闹钟列表，两者都没有「节奏」。
 - 日程与闹钟出厂**停用**；添加订阅并成功拉取后、或加第一条闹钟后提示开启。
 - 一次性闹钟的补发窗口 60 分钟，且被当天工作时段结束封顶；重复闹钟错过不补；免打扰按"不在场"处理。
@@ -63,7 +63,7 @@ Barge In 是 macOS 上的反内耗打断工具：常驻菜单栏，在你被手�
 | 设置窗口 | 独立 `NSWindow`（SwiftUI 内容），仅用户主动打开；内含五个 tab，预设网格直接列出该场景的全部卡片 |
 | 提醒层 | 每个连接的屏幕一个无边框 `NSPanel`，覆盖全部屏幕；同一时刻只有一条提醒 |
 | 网络 | **默认零网络**。只有两处出站，都只读：日程场景启用且配置了订阅时向用户填写的地址发请求；自动检查更新开启时每 24 小时读一次 GitHub 的 releases feed |
-| 本地数据 | `UserDefaults` 存状态；`Application Support/BargeIn/` 存订阅缓存；Keychain 存密码 |
+| 本地数据 | `UserDefaults` 存状态；`Application Support/BargeIn/` 存订阅缓存；日程密码默认存 `~/.config/bargein/config.toml`（权限 0600），切到钥匙串时改存钥匙串 |
 
 ### 3.2 模块划分（SwiftPM 多 target）
 
@@ -78,12 +78,12 @@ SceneSchedule/        日程：订阅模型、ICS 解析、RRULE 展开、事件
 SceneAlarm/           闹钟：闹钟模型、重复规则、无效判定、场景状态（AlarmState）+
                       场景描述（AlarmScene）
 BargeIn/              AppState、StateStore、ReminderEngine、订阅拉取与缓存、
-                      Keychain、popover、设置、提醒层、品牌、DevSnapshot、SelfTest
+                      凭据存储（Credentials）、popover、设置、提醒层、品牌、DevSnapshot、SelfTest
 ```
 
 - `BargeInCore` 只依赖 Foundation，不引入 SwiftUI/AppKit。
 - 场景模块只依赖 `BargeInCore`，各自持有自己的 Codable 状态、默认文案、变量与完成动作标签。
-- `SceneSchedule` 依赖 Foundation 与 `URLSession`，负责"地址或 CalDAV 凭据 → 事件列表"的纯数据链路（含 CalDAV 的 `PROPFIND` / `REPORT` 请求构造与 XML 解析）；**弹窗、Keychain、缓存目录、定时器都在 App 层**，场景模块不认识 UI 与钥匙串。
+- `SceneSchedule` 依赖 Foundation 与 `URLSession`，负责"地址或 CalDAV 凭据 → 事件列表"的纯数据链路（含 CalDAV 的 `PROPFIND` / `REPORT` 请求构造与 XML 解析）；**弹窗、凭据存储、缓存目录、定时器都在 App 层**，场景模块不认识 UI 与密码。
 - `SceneAlarm` 只有纯数据与判定：闹钟模型、重复规则、无效判定、文案样例。它不知道工作时段在哪配，只接受调用方传入的通用时间。
 - `BargeIn`（可执行 target）依赖五者，显式组装四个场景，不做注册表/发现。
 
@@ -117,9 +117,9 @@ CalDAV 凭据 ──► REPORT ──────┘                            
 | `BargeInCore` | 调度、账本、预设、文案解析、场景 ID/描述/配置类型、队列键 | 具体场景的业务字段、ICS 解析、SwiftUI、AppKit |
 | `SceneWater` | 配额状态、喝水默认文案/变量/完成标签 | 调度器、账本实现、UI |
 | `SceneActivity` | 今日次数、活动默认文案/变量/完成标签 | 调度器、账本实现、UI |
-| `SceneSchedule` | 订阅模型、ICS 解析与 RRULE 展开、CalDAV 请求构造与 XML 解析、事件时间窗口、日程默认文案/变量/完成标签 | UI、Keychain、缓存目录 |
+| `SceneSchedule` | 订阅模型、ICS 解析与 RRULE 展开、CalDAV 请求构造与 XML 解析、事件时间窗口、日程默认文案/变量/完成标签 | UI、凭据存储、缓存目录 |
 | `SceneAlarm` | 闹钟模型与重复规则、无效判定、闹钟默认文案/变量/完成标签、样例值 | UI、持久化容器、定时器 |
-| `BargeIn` | `AppState` 聚合、`StateStore`、`ReminderEngine`、订阅调度与缓存、Keychain、全部 UI、`SceneRegistry` | 场景私有的业务规则、ICS 语法与 DAV 协议细节 |
+| `BargeIn` | `AppState` 聚合、`StateStore`、`ReminderEngine`、订阅调度与缓存、凭据存储、全部 UI、`SceneRegistry` | 场景私有的业务规则、ICS 语法与 DAV 协议细节 |
 
 ## 4. 核心模型
 
@@ -385,8 +385,8 @@ struct Subscription: Codable, Equatable, Identifiable {
     var lastError: FeedError?
 
     enum Source: Codable, Equatable {
-        case ics(url: URL, username: String?)                    // 密码（若有）进 Keychain
-        case caldav(server: URL, username: String,               // 密码进 Keychain
+        case ics(url: URL, username: String?)                    // 密码（若有）进凭据存储
+        case caldav(server: URL, username: String,               // 密码进凭据存储
                     calendars: [CalendarRef])                    // 添加时发现并选定的集合
     }
 }
@@ -405,7 +405,10 @@ enum FeedError: String, Codable {
 ```
 
 - 可以有多个订阅，每条独立启用。
-- **密码一律进 Keychain**（`kSecClassInternetPassword`，service `BargeIn.calendar`，account = 订阅 id）；`AppState` 里只留服务器地址与用户名。
+- **密码进凭据存储，默认是本地配置文件**：`~/.config/bargein/config.toml` 的 `[passwords]` 表，键 = 订阅 id，值 = 密码；目录 0700、文件 0600、临时文件 + rename 原子写。选「系统钥匙串」时改存 `kSecClassGenericPassword`（service `BargeIn.calendar`，account = 订阅 id）。`AppState` 里只留服务器地址、用户名与一个 `credentialStore` 模式字段。
+- 为什么默认不是钥匙串：ad-hoc 签名每版都变，钥匙串的「始终允许」绑在签名身份上，于是每次更新都要重新授权一次；本地文件没有这条身份约束。代价写在明处——文件是明文，备份会带上它，所以权限收到 0600，设置页与 README 都写明明文与路径。
+- 切换模式时把已存的密码搬过去：先写新存储、读回核对、再删旧存储；搬不成（例如钥匙串授权被取消）就留在原处、模式不切，设置页给一行说明。
+- 升级迁移：老版本只往钥匙串里存过密码的，在本地文件模式下第一次取用时从钥匙串读一次、写进文件、删掉钥匙串条目——用户点一次「始终允许」，之后不再弹。
 - ICS 地址里的 token 属于地址本身，随 `AppState` 存 `UserDefaults`。
 - 只接受 `https`；`webcal://` / `webcals://` 视为 `https://`；`http://` 直接拒绝并提示"只支持 https 地址"。理由：Basic Auth 明文过网不可接受。
 - **只读边界**：CalDAV 从协议上允许写入，但 Barge In 只发 `PROPFIND` 与 `REPORT`，永不发 `PUT` / `DELETE` / `MKCALENDAR`。写操作在这个产品里没有对应功能，不存在"顺手加固"的空间。
@@ -428,7 +431,7 @@ CalDAV 的流程（以钉钉为基准，其他服务器同构）：
 |---|---|
 | 传输 | `URLSession` + ephemeral 配置，不共享 cookie/缓存，超时 15s，跟随重定向 |
 | 地址规范化 | 请求前把 `webcal://` / `webcals://` 改写成 `https://`（`URLSession` 不认这两个 scheme）；`http://` 拒绝 |
-| 认证 | 只用 `Authorization: Basic base64(user:password)` 头。**不使用 URL 内嵌 `user:pass`**（RFC 7617 已不推荐，`URLSession` 也不会可靠地拿它应答 401）：粘贴的地址里带 userinfo 时，拆出来进 Keychain，地址本身去掉 |
+| 认证 | 只用 `Authorization: Basic base64(user:password)` 头。**不使用 URL 内嵌 `user:pass`**（RFC 7617 已不推荐，`URLSession` 也不会可靠地拿它应答 401）：粘贴的地址里带 userinfo 时，拆出来进凭据存储，地址本身去掉 |
 | 请求头 | `User-Agent: BargeIn/1.0`；不手动设 `Accept-Encoding`（交给 `URLSession` 透明解压） |
 | ICS 响应校验 | `Content-Type` 是 `text/calendar`（`text/plain` 也接受）；返回 HTML 判 `format` |
 | CalDAV 响应校验 | 状态码 `207` + body 是能解析的 XML；`200` + HTML 判 `format` |
@@ -569,7 +572,7 @@ CalDAV 的流程（以钉钉为基准，其他服务器同构）：
 | 喝水 / 活动 | 场景条、提醒预设、节奏；喝水另有一张配额卡 |
 | 日程 | 场景条、提醒预设、订阅列表、前置 |
 | 闹钟 | 场景条、提醒预设、闹钟列表（行内编辑） |
-| 通用 | 四个场景共用的时间（工作时段 + 休息日，对喝水、活动与闹钟生效）、开机自启、隐私说明 |
+| 通用 | 四个场景共用的时间（工作时段 + 休息日，对喝水、活动与闹钟生效）、开机自启、凭据存储、隐私说明 |
 
 **场景 tab**
 
@@ -610,7 +613,7 @@ CalDAV 的流程（以钉钉为基准，其他服务器同构）：
 
 日程 tab **没有「节奏」卡**：节奏就是日历本身。卡底一行说明"日程不受工作时段与休息日约束，免打扰仍然生效"。空订阅态下，「提醒预设」与「前置」照常可见，只是一个都不会触发。添加订阅的表单与编辑面板用同一套输入框皮肤。
 
-**通用 tab**：时间卡（工作时段起止、休息日 7 个胶囊、时段长度、结束早于开始的行内提示、"喝水、活动与闹钟共用这套时间；日程按事件自己的时间提醒"说明）、通用卡（开机自启，附一句"登录后在菜单栏静默启动，不打开窗口"；第二行是「自动检查更新」开关，附一句"启动时与每 24 小时查一次 GitHub；只读，不发送任何数据"）、版本卡（当前版本 + 检查 / 可更新 / 下载 / 安装 / 失败五种状态；有新版时写出这次更新了什么并给「发布说明」入口），卡下方两行小字：隐私口径"零权限 · 数据只保存在本机；日程订阅与更新检查是仅有的联网功能，都只读，更新检查可关闭"，以及作者信息"作者 qiqiang · GitHub · 官网 · MIT 许可"（GitHub 与官网是可点的链接）。作者信息不做成单独一张卡：一张卡只装一行链接，还会把隐私那行挤到折叠线以下。
+**通用 tab**：时间卡（工作时段起止、休息日 7 个胶囊、时段长度、结束早于开始的行内提示、"喝水、活动与闹钟共用这套时间；日程按事件自己的时间提醒"说明）、通用卡（开机自启，附一句"登录后在菜单栏静默启动，不打开窗口"；第二行是「自动检查更新」开关，附一句"启动时与每 24 小时查一次 GitHub；只读，不发送任何数据"；第三行是「凭据存储」二选一（本地文件 / 钥匙串），附一段说明"本地文件：明文存在 ~/.config/bargein/config.toml（权限 600），换版本不再弹授权。钥匙串：不落明文，但每次更新后可能要再授权一次。切换时已存的密码会被搬过去"）、版本卡（当前版本 + 检查 / 可更新 / 下载 / 安装 / 失败五种状态；有新版时写出这次更新了什么并给「发布说明」入口），卡下方两行小字：隐私口径"零权限 · 数据只保存在本机；日程订阅与更新检查是仅有的联网功能，都只读，更新检查可关闭"，以及作者信息"作者 qiqiang · GitHub · 官网 · MIT 许可"（GitHub 与官网是可点的链接）。作者信息不做成单独一张卡：一张卡只装一行链接，还会把隐私那行挤到折叠线以下。
 
 **其余交互**：时间输入统一用自绘 `TimePicker`（`Sources/BargeIn/UI/TimePicker.swift`）：收起态是 24 小时制 `HH:mm`（`bordered: false` 时进入列表行，不画胶囊边框），点开是「时网格 + 分滑条」：时是 24 项 6 列网格，分是 0–59 的滑条（1 分钟步进）。单击 / 拖动即改、即时生效。`Esc` 逐级退：编辑面板展开时先收起，否则关闭设置窗口。
 
@@ -686,6 +689,13 @@ CalDAV 的流程（以钉钉为基准，其他服务器同构）：
 
 通用卡第二行是「自动检查更新」开关（出厂开）。关掉后计时器立刻停，正在进行的下载不受影响。
 
+**凭据存储**
+
+- 出厂「本地文件」：密码写在 `~/.config/bargein/config.toml` 的 `[passwords]` 表（键 = 订阅 id）。换版本不触发任何授权弹窗。
+- 另一档「钥匙串」：与旧版行为一致。代价是 ad-hoc 签名每版都变，更新后系统会再问一次「始终允许」。
+- 切换时搬已存的密码：写新存储 → 读回核对 → 删旧存储；任何一条没搬成就留在原处、模式不切，卡里给一行说明。
+- 老用户升级后仍是「本地文件」，第一次取密码时从钥匙串读一次、写进文件并删掉钥匙串条目：点一次「始终允许」，之后长期静默。
+
 **安装**
 
 1. 下载到 `URLSession` 的临时文件，进度由 `URLSessionDownloadDelegate` 上报。
@@ -730,6 +740,7 @@ struct AppState: Codable, Equatable {
     var lastActiveDate: Date
     var hasOnboarded: Bool
     var checkForUpdates: Bool          // 出厂 true；关掉后不再自动联网
+    var credentialStore: CredentialStoreMode  // 出厂 .file；日程密码存本地文件还是钥匙串
     var lastNotifiedVersion: String?   // 同一个新版本只通知一次
 }
 ```
@@ -739,7 +750,7 @@ struct AppState: Codable, Equatable {
 - 连逐字段容错都救不回来的存档（比如完全不是 JSON）：先把原始 bytes 另存到 `Application Support/BargeIn/state-unreadable-<时间>.json`，再用出厂值启动，并在日志里说明。**任何情况下都不静默丢档。**
 - 场景配置解码后 `normalize()`：空实例列表回出厂三张卡，缺哪张内置补哪张（追加末尾、不激活、幂等），激活项丢了回大字墙。
 - 存档域：打包版是 `com.bargein.app`（`UserDefaults.standard`）；`swift run` 跑的是裸二进制、没有 bundle id，会落到以进程名命名的另一个域，所以无 bundle 时统一回 `com.bargein.app`，开发期与安装版共用同一份存档。
-- **`AppState` 里不存密码、不存 `.ics` 原文、不存下一次触发时刻、不存队列、不存 `snoozedUntil` 与闹钟的推迟时刻**。密码在 Keychain，`.ics` 在 `Application Support/BargeIn/subscriptions/`，其余都是运行时状态；闹钟的候选时刻每次重算现铺。
+- **`AppState` 里不存密码、不存 `.ics` 原文、不存下一次触发时刻、不存队列、不存 `snoozedUntil` 与闹钟的推迟时刻**。密码在凭据存储（默认本地文件），`.ics` 在 `Application Support/BargeIn/subscriptions/`，其余都是运行时状态；闹钟的候选时刻每次重算现铺。
 
 ## 8. 边界与异常
 
@@ -821,7 +832,7 @@ Sources/SceneWater/      // 喝水场景
 Sources/SceneActivity/   // 活动场景
 Sources/SceneSchedule/   // 日程：ICS 解析、RRULE 展开、事件模型
 Sources/SceneAlarm/      // 闹钟：闹钟模型、重复规则、无效判定
-Sources/BargeIn/         // App 层：状态聚合、订阅拉取与缓存、Keychain、UI、提醒层、自检
+Sources/BargeIn/         // App 层：状态聚合、订阅拉取与缓存、凭据存储、UI、提醒层、自检
 Info.plist
 scripts/bundle.sh        // 组装 Barge In.app
 Makefile                 // make run / make app
@@ -831,7 +842,7 @@ Makefile                 // make run / make app
 - `make app`：`swift build -c release` → 组装 `Barge In.app/Contents/{MacOS,Resources,Info.plist}` → 调 `--export-icon` 生成 `Contents/Resources/AppIcon.icns` → `codesign -s -`（ad-hoc）。
 - 六个开发期开关：`--selftest` 跑不依赖 UI 的检查，`--demo` 立即弹一次喝水提醒，`--demo-update` 立即弹一次更新通知（不检查、不写状态），`--snapshot <dir>` 把 popover / 设置 / 提醒层离屏渲染成 PNG，`--export-icon <dir>` 生成 iconset / icns 与菜单栏图预览，`--calendar-probe` 只取一次并把解析结果打到 stdout：`--calendar-probe ics <url>` 或 `--calendar-probe caldav <server> <username> [--discover]`（排查订阅用，密码从环境变量读，不落盘）。
 - `Info.plist` 关键项：`LSUIElement=true`、`CFBundleIdentifier`、`LSMinimumSystemVersion`、`CFBundleIconFile`。
-- **不启用 App Sandbox**（SwiftPM + 脚本分发的现状），因此 `URLSession` 出站不需要额外 entitlement；凭据走 Keychain，不需要用户授权弹窗。ATS 默认只允许 https，与"只接受 https 订阅"一致，不加例外。
+- **不启用 App Sandbox**（SwiftPM + 脚本分发的现状），因此 `URLSession` 出站不需要额外 entitlement；凭据默认存本地文件，不触发任何授权弹窗；选钥匙串时，ad-hoc 签名每版都变，更新后系统会再问一次——这正是默认不用钥匙串的原因。ATS 默认只允许 https，与"只接受 https 订阅"一致，不加例外。
 - 正式分发需 Developer ID 证书 + 公证，放到发布阶段处理，不在本期代码范围内。
 
 **权限清单：仍然零权限。** 不使用 `UNUserNotificationCenter`、不使用辅助功能、不使用屏幕录制、不使用 Apple Events。联网只有两处出站 HTTPS：日程订阅（`GET` / `PROPFIND` / `REPORT`）与更新检查（读一次 releases feed），都不是系统权限。
@@ -874,10 +885,13 @@ Makefile                 // make run / make app
 | M9 日程 v0.3 | `SceneID.schedule`、`SceneTrigger`、`SceneSchedule`（ICS 解析 + RRULE + CalDAV 传输）、钉钉 CalDAV 全链路、订阅调度与缓存、Keychain、失败降级、队列按事件去重、设置第 4 个 tab、popover 日程行 | **真实钉钉 CalDAV 账号**能发现日历、拉到事件、在事件开始前 5 分钟提醒；改事件时间 30 分钟内同步；断网仍按缓存提醒并标注过期；19:00 与周六的日程照常提醒；两个相隔 5 分钟的事件逐条呈现 |
 | M10 闹钟 v0.4 | `SceneID.alarm`、`SceneTrigger.alarms`、`SceneAlarm`（闹钟模型 / 重复规则 / 无效判定 / 样例值）、`ScheduledMoment`、候选时刻铺点、一次性补发窗口、队列按发生时刻去重、设置第 5 个 tab、popover 闹钟行 | 11:30 的每天闹钟到点用大字墙呈现；跳过与完成只记录、不改变呈现；19:30 的闹钟标「不会响」且不触发；一次性落在周六标「那天是休息日」；改工作时段立即重判；离场 20 分钟回来补一次、70 分钟回来作废；一次性关闭或次日消失 |
 | M11 免费内容 v0.5 | 预设格式 + 内置免费预设 | 新增一套内置预设不需要改引擎代码；全部免费，界面没有购买入口 |
+| M14 凭据存储 v0.4.10 | `Credentials` 两种存储（本地文件 / 钥匙串）、密码文件读写（TOML 子集、0600、原子写）、设置·通用二选一、切换与升级迁移 | 老用户升级后只被问一次「始终允许」，换版本不再弹；切到钥匙串再切回不丢密码；手写的坏行只跳过不报错 |
 | M13 更新检查 v0.4.3 | `UpdateChecker`（releases atom、版本比较、下载安装）、温柔更新通知、通用页开关与版本卡、`AppState` 两个字段 | 0.4.1 的机器检测到 0.4.3 后弹出温柔卡，点卡片落在设置·通用；关闭自动检查后不再联网；点更新能下载、校验、替换并重启；同一版本只通知一次 |
 | M12 公开仓库正式发布 v1.0 | 公证、公开仓库、官网、下载页 | 下载即开，无 Gatekeeper 拦截 |
 
 ## 修订记录
+
+- 2026-11-18：凭据存储——日程密码默认存 `~/.config/bargein/config.toml`（0600），钥匙串改为可选，解决每次更新后重新授权（[ADR-0007](adr/0007-credential-file-store.md)）
 
 - 2026-11-17：版本号 0.4.8——大字墙排布每次呈现重新散列；状态与目标版本同步
 - 2026-11-17：版本号 0.4.7——设置页 tab 图标、预设两行封顶（超出纵向滚动）、通用页作者信息；状态与目标版本同步

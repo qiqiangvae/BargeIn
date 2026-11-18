@@ -210,6 +210,7 @@
   .row .sp{flex:1}
   .sp{flex:1}
   .note{font-size:11px;line-height:1.5;color:var(--ink2);margin:0}
+  .note code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:var(--ink2)}
   hr.sep{border:0;border-top:1px solid var(--stroke);margin:0;opacity:.8}
 
   .stepper{display:flex;align-items:center;gap:10px}
@@ -857,6 +858,16 @@
             <span class="sp"></span>
             <button class="switch" role="switch" aria-checked="true" aria-label="自动检查更新"></button>
           </div>
+          <hr class="sep">
+          <div class="row">
+            <span class="txt"><span class="t">凭据存储</span><span class="h">日程的 CalDAV 密码存哪里</span></span>
+            <span class="sp"></span>
+            <span class="seg" role="group" aria-label="凭据存储" style="width:150px">
+              <button aria-checked="true">本地文件</button>
+              <button aria-checked="false">钥匙串</button>
+            </span>
+          </div>
+          <p class="note">本地文件：明文存在 <code>~/.config/bargein/config.toml</code>（权限 600），换版本不再弹授权。钥匙串：不落明文，但每次更新后可能要再授权一次。切换时已存的密码会被搬过去。</p>
         </section>
 
         <section class="card" data-version-card>
@@ -917,6 +928,7 @@
   这一版另改三处：动作按钮从「编辑文案」改成「编辑」（它改名称、强度与文案，不只文案）；碎裂不再暴露裂纹参数，花纹每次提醒重新生成；时间弹层里的分钟从 12 个格子改成一条滑条，时仍是网格。
   更新这一版：通用 tab 加「自动检查更新」开关与「版本」卡。检查更新没有单独页面——静默检查、有新版本时的温柔通知卡见 <a href="update.html">update.html</a>；版本卡承载检查 / 可更新 / 下载 / 安装 / 失败这五种状态，主按钮只在这张卡里换形态。有新版时版本卡写出「这次更新了什么」（发布说明里的第一个小标题）并给「发布说明」入口；通知卡只说这是 Barge In 的更新，不堆正文。联网口径随之改为「日程订阅 + 更新检查，都只读，更新检查可关闭」。
   更新这一版：① 五个主 tab 各加一个图标，直接用场景自己的符号（水滴 / 走路 / 日历 / 闹钟），通用是齿轮，与 popover 里每个场景的图标同一套（原型里画成线稿；实现用 SF Symbols，走路人只有实心版，所以五个图标统一取实心字形，一排里不混笔重）；② 提醒预设两行封顶，第 7 张起在网格里纵向滚动，卡头右侧写「共 N 套」，节奏 / 订阅 / 闹钟不再被预设挤到屏外。选纵向不选横向：预设是并排比较的东西，横向会把卡藏到鼠标够不着的手势后面（普通滚轮不横滚），纵向和页面滚动同向、手势一致；macOS 滚动条默认随滚动出现，溢出提示不能只靠它，所以用套数写出来。复制出来的卡排到最后，网格会滚到底把它露出来，否则点了「复制」界面看着没反应；③ 通用页底部加一行作者信息「作者 qiqiang · GitHub · 官网 · MIT 许可」——不单独占一张卡，免得把上面那行隐私口径挤到折叠线以下。
+  更新这一版：通用 tab 加「凭据存储」二选一（本地文件 / 钥匙串），默认本地文件。原因：ad-hoc 签名每版都变，钥匙串把授权绑在签名身份上，每次更新都要再点一次「始终允许」；本地文件没有这条身份约束。代价是密码明文落盘，所以路径与明文性质写在行下、文件权限收到 600，并保留钥匙串作为可选。切换时已存的密码由 App 搬过去，用户不重填。
 </p>
 
 <script>
