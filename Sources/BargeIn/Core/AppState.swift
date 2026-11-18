@@ -24,7 +24,7 @@ struct AppState: Codable, Equatable {
     var pausedUntil: Date?
     var lastActiveDate: Date = Date()
     var hasOnboarded: Bool = false
-    /// 启动时与每 24 小时问一次 GitHub 有没有新版本；关掉后 App 不再为更新联网。
+    /// 启动时与每小时问一次 GitHub 有没有新版本；关掉后 App 不再为更新联网。
     var checkForUpdates: Bool = true
     /// 已经用温柔卡通知过的版本。同一个版本只提醒一次。
     var lastNotifiedVersion: String?

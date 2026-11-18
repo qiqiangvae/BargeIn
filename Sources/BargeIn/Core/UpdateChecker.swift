@@ -70,15 +70,15 @@ final class UpdateChecker {
         first.tolerance = 5
         RunLoop.main.add(first, forMode: .common)
         autoTimers = [first]
-        scheduleDaily()
+        scheduleHourly()
     }
 
-    /// 设置里的开关。打开时当场查一次，之后每 24 小时一次；关掉立刻停表。
+    /// 设置里的开关。打开时当场查一次，之后每小时一次；关掉立刻停表。
     func setAutoCheck(_ enabled: Bool) {
         stopAutoCheck()
         guard enabled, isSupported else { return }
         check(notify: true)
-        scheduleDaily()
+        scheduleHourly()
     }
 
     private func stopAutoCheck() {
@@ -86,13 +86,13 @@ final class UpdateChecker {
         autoTimers.removeAll()
     }
 
-    private func scheduleDaily() {
-        let daily = Timer(timeInterval: 86_400, repeats: true) { [weak self] _ in
+    private func scheduleHourly() {
+        let hourly = Timer(timeInterval: 3_600, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.check(notify: true) }
         }
-        daily.tolerance = 600
-        RunLoop.main.add(daily, forMode: .common)
-        autoTimers.append(daily)
+        hourly.tolerance = 60
+        RunLoop.main.add(hourly, forMode: .common)
+        autoTimers.append(hourly)
     }
 
     func check(notify: Bool = false) {
