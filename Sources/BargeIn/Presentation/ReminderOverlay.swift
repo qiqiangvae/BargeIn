@@ -6,7 +6,7 @@ import BargeInCore
 @Observable
 final class OverlayState {
     private(set) var secondsLeft: Int
-    /// 关闭/中断按钮的延迟解锁。
+    /// 动作区的延迟解锁：强硬档 5 秒内"喝了"与 × 都不响应，双击 Esc 不受它影响。
     private(set) var unlocked: Bool
     /// 覆盖层出现后 1 秒内所有按钮都不响应，避免"正在点的位置"被吞成误触。
     private(set) var interactive = false
