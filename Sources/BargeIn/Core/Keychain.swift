@@ -1,14 +1,15 @@
 import Foundation
 import Security
 
-/// 订阅密码只进 Keychain：`AppState` 里只留服务器地址与用户名。
+/// 钥匙串里的一份密码。默认存储是本地文件（见 `Credentials`）；这里只服务选择钥匙串的用户。
 enum Keychain {
     private static let service = "BargeIn.calendar"
 
-    static func setPassword(_ password: String, for id: UUID) {
+    @discardableResult
+    static func setPassword(_ password: String, for id: UUID) -> Bool {
         guard !password.isEmpty else {
             deletePassword(for: id)
-            return
+            return true
         }
         let account = id.uuidString
         deletePassword(for: id)
@@ -19,7 +20,7 @@ enum Keychain {
             kSecValueData as String: Data(password.utf8),
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
         ]
-        SecItemAdd(query as CFDictionary, nil)
+        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
     }
 
     static func password(for id: UUID) -> String? {

@@ -394,7 +394,7 @@ struct ScheduleSettingsSection: View {
                     calendars: calendars
                 )
                 store.upsert(subscription)
-                Keychain.setPassword(password, for: subscription.id)
+                Credentials.save(password, for: subscription.id, mode: store.state.credentialStore)
                 await feeds.refresh(subscription, force: true)
                 model.resetSubscriptionDraft()
                 onChanged()
@@ -420,7 +420,7 @@ struct ScheduleSettingsSection: View {
                     password: password
                 )
                 store.upsert(subscription)
-                Keychain.setPassword(password, for: subscription.id)
+                Credentials.save(password, for: subscription.id, mode: store.state.credentialStore)
                 await feeds.refresh(subscription, force: true)
                 model.resetSubscriptionDraft()
                 onChanged()
@@ -435,7 +435,7 @@ struct ScheduleSettingsSection: View {
             model.expandedSubscriptionID = nil
         }
         store.removeSubscription(subscription.id)
-        Keychain.deletePassword(for: subscription.id)
+        Credentials.delete(for: subscription.id, mode: store.state.credentialStore)
         feeds.forget(subscription.id)
         onChanged()
     }

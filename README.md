@@ -47,6 +47,7 @@ xattr -d com.apple.quarantine "/Applications/Barge In.app"
 - 订阅你已有的日历，事件开始前 N 分钟（默认 5）把你拽出来
 - 两种只读来源：**一条日历地址**（Google 秘密地址 / iCloud 公开共享 / Outlook 发布链接 / Nextcloud 公开分享），或**一套 CalDAV 凭据**（钉钉、企业微信、飞书、iCloud 私有、Fastmail、Nextcloud）
 - 钉钉：日历设置 → 同步 → 同步到其他日历 → 获取 CalDAV 账号，把服务器、账号、密码填进来即可
+- 密码默认存在本机 `~/.config/bargein/config.toml`（权限 0600，明文），可在「通用 → 凭据存储」切到系统钥匙串
 - 只读的边界：只发读请求（`GET` / `PROPFIND` / `REPORT`），不写回、不新建、不删除、不读参会人；支持多条来源
 - 日程豁免工作时段与休息日（19:00 的会、周六的日程照常提醒），免打扰仍然生效
 - 两个会挨着也能各提醒一次，逐条呈现

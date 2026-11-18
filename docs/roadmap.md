@@ -156,7 +156,7 @@
 - `SceneSchedule` target：iCalendar 子集解析（行折叠与转义、`UID`/`SUMMARY`/`DTSTART`/`LOCATION`/`RRULE`/`EXDATE`、`TZID`/UTC/`VALUE=DATE`）、`DAILY/WEEKLY/MONTHLY + INTERVAL + COUNT/UNTIL/BYDAY` 展开、事件窗口 `[now-1d, now+8d]`
 - 传输一（ICS）：`GET` + 可选 Basic Auth、`webcal://` 改写、`Content-Type` 校验
 - 传输二（CalDAV）：`PROPFIND` 发现日历集合 → 用户勾选 → `REPORT calendar-query` 拉事件；钉钉 `calendar.dingtalk.com` 为首个验收目标，企业微信/飞书/iCloud 私有/Nextcloud 同构
-- 订阅：多条来源（地址或 CalDAV 账户）、密码进 Keychain、串行请求、30 分钟刷新 + 唤醒刷新 + 手动刷新、失败退避到 4 小时、取回的日历文本缓存到 `Application Support`
+- 订阅：多条来源（地址或 CalDAV 账户）、密码进凭据存储（后来默认本地文件，见 ADR-0007）、串行请求、30 分钟刷新 + 唤醒刷新 + 手动刷新、失败退避到 4 小时、取回的日历文本缓存到 `Application Support`
 - 失败降级：读缓存继续提醒 + 设置页与 popover 标注过期；认证/格式/网络三类错误分别给文案
 - 队列：去重键改为 `ReminderKey(scene, eventKey?)`，日程按事件各一条
 - 已提醒去重：`handledEventKeys` 落盘按天清理；推迟用 `snoozedUntil`（进程内）
@@ -184,7 +184,7 @@
 - **覆盖缺口**：CalDAV 覆盖钉钉/企业微信/飞书/iCloud 私有/Nextcloud，但 Google 私有与 Outlook 私有仍要 OAuth 或 Graph。文档明写支持范围，不承诺通吃。
 - **钉钉 CalDAV 已实测**：2026-11 用真实账号跑通「发现 → REPORT → 解析 → 提醒」全链路；企业微信、飞书、腾讯会议仍以公开前的实测为准，跑不通先修传输层，不靠改叙事绕过。
 - **解析长尾**：真实 `.ics` 里格式千奇百怪（非标准时区、非法折行、缺少 `DTEND`、`RRULE` 长尾）。策略是"解析不出的单条事件跳过并计数，整本失败才报错"，不让一条脏数据拖垮整天。
-- **联网叙事**：产品第一次联网，容易被当作"开始变味"。对策是只读、默认关、凭据进 Keychain、README 明写。
+- **联网叙事**：产品第一次联网，容易被当作"开始变味"。对策是只读、默认关、凭据有明确的存储与权限口径、README 明写。
 - **地址失效**：秘密地址被重置后用户只会看到"没日程了"。对策是错误原因与"今天真没日程"分开说。
 
 ## 7. v0.4 — 闹钟
@@ -310,6 +310,8 @@
 | 自动更新把 App 装坏 / 装不上 | 用户点完更新得到一个打不开或没变化的 App | 校验 bundle id、版本与签名后再替换；替换失败自动还原；失败在版本卡写明并给手动下载 |
 
 ## 修订记录
+
+- 2026-11-18：凭据存储——日程密码默认存本地配置文件（0600），钥匙串改为可选，解决每次更新后重新授权（[ADR-0007](adr/0007-credential-file-store.md)）
 
 - 2026-11-16：更新检查——新增 M13（v0.4.3，完成）：releases atom、温柔通知、通用页开关与版本卡、一键安装
 - 2026-11-16：开源——源码并入公开仓库（MIT，[ADR-0005](adr/0005-open-source.md)）；M6 完成、M12 去掉「核心代码暂不公开」验收、延后项移除开源
